@@ -1,11 +1,15 @@
 const knex = require("knex")({
-  client: "mysql2", // lub 'pg' jeśli PostgreSQL
+  client: "pg",
   connection: {
     host: "localhost",
-    user: "twoj_user",
-    password: "twoje_haslo",
-    database: "shop_db",
+    user: process.env.DB_USER || "postgres",
+    password: process.env.DB_PASSWORD || "password",
+    database: process.env.DB_NAME || "ecommerce",
   },
 });
 
+const bookshelf = require("bookshelf")(knex);
+bookshelf.plugin("registry");
+
 module.exports = knex;
+module.exports = bookshelf;
