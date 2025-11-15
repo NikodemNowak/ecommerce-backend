@@ -1,4 +1,5 @@
 // Update with your config settings.
+import 'dotenv/config'
 
 /**
  * @type { Record<string, import('knex').Knex.Config> }
