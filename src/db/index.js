@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import knexLib from 'knex'
 import bookshelfLib from 'bookshelf'
 

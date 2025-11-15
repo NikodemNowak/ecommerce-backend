@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import express from 'express'
 import productRoutes from './src/routes/products.js'
 import categoryRoutes from './src/routes/category.js'
