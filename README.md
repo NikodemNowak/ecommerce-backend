@@ -29,7 +29,7 @@ Backend korzysta ze zmiennych środowiskowych (każda ma domyślną wartość):
 
 ## Struktura projektu
 
-- `controllers/` – kontrolery Express (obecnie `products`)
+- `controllers/` – kontrolery Express (products, categories, orders, statuses)
 - `db/` – inicjalizacja Knex + Bookshelf
 - `migrations/` – definicje schematu bazy
 - `models/` – miejsce na przyszłe modele Bookshelf
@@ -77,12 +77,43 @@ Backend korzysta ze zmiennych środowiskowych (każda ma domyślną wartość):
 
 ## Endpointy
 
-| Metoda | Ścieżka     | Opis                                         |
-| ------ | ----------- | -------------------------------------------- |
-| GET    | `/`         | prosty komunikat zdrowotny                   |
-| GET    | `/products` | przykładowa lista produktów (dane statyczne) |
+### Ogólne
 
-> Obecnie `/products` zwraca dane mockowe. Po dodaniu modeli można podpiąć zapytania do tabeli `products`.
+| Metoda | Ścieżka | Opis                                          |
+| ------ | ------- | --------------------------------------------- |
+| GET    | `/`     | prosty komunikat potwierdzający działanie API |
+
+### Produkty
+
+| Metoda | Ścieżka         | Opis                                                                 |
+| ------ | --------------- | -------------------------------------------------------------------- |
+| GET    | `/products`     | zwraca wszystkie produkty z bazy                                     |
+| GET    | `/products/:id` | pojedynczy produkt (404, gdy brak rekordu)                           |
+| POST   | `/products`     | tworzy produkt na podstawie JSON-a (nazwa, cena, opis, FK kategorii) |
+| PUT    | `/products/:id` | aktualizuje dane produktu                                            |
+| DELETE | `/products/:id` | usuwa produkt i zwraca `{ "message": "Deleted" }`                    |
+
+### Kategorie
+
+| Metoda | Ścieżka       | Opis                                             |
+| ------ | ------------- | ------------------------------------------------ |
+| GET    | `/categories` | lista wszystkich kategorii z tabeli `categories` |
+
+### Zamówienia
+
+| Metoda | Ścieżka                      | Opis                                                            |
+| ------ | ---------------------------- | --------------------------------------------------------------- |
+| GET    | `/orders`                    | zwraca pełną listę zamówień wraz z pozycjami                    |
+| GET    | `/orders/:id`                | szczegóły pojedynczego zamówienia                               |
+| GET    | `/orders/user/:username`     | zamówienia przypisane do konkretnego użytkownika                |
+| GET    | `/orders/status/:statusName` | zamówienia o wskazanym statusie (np. `ZREALIZOWANE`)            |
+| PUT    | `/orders/:id`                | zmiana statusu – w body wymagane `{ "status": "ZATWIERDZONE" }` |
+
+### Statusy
+
+| Metoda | Ścieżka   | Opis                                     |
+| ------ | --------- | ---------------------------------------- |
+| GET    | `/status` | zwraca seedowaną listę statusów zamówień |
 
 ## Przegląd schematu bazy
 
