@@ -9,9 +9,10 @@ export function up(knex) {
       .inTable('orders')
       .onDelete('CASCADE')
       .onUpdate('CASCADE')
-    table.integer('rating').notNullable()
+    table.integer('rating').unsigned().notNullable()
     table.text('content').notNullable()
     table.timestamps(true, true)
+    table.unique(['order_id'])
   })
 }
 

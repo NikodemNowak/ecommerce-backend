@@ -12,13 +12,13 @@ const OPINION_ALLOWED_STATUSES = ['ZREALIZOWANE', 'ANULOWANE']
 class OrderService {
   async getAllOrders() {
     return Order.fetchAll({
-      withRelated: ['status', 'items', 'opinions'],
+      withRelated: ['status', 'items', 'opinions', 'user'],
     })
   }
 
   async getById(id) {
     const order = await Order.where({ id })
-      .fetch({ withRelated: ['status', 'items', 'opinions'] })
+      .fetch({ withRelated: ['status', 'items', 'opinions', 'user'] })
       .catch(() => null)
 
     if (!order) {
@@ -28,17 +28,22 @@ class OrderService {
     return order
   }
 
-  async createOrder(payload) {
-    const { items = [], ...rest } = payload || {}
-    const orderData = this._validateOrderData(rest)
+  async createOrder(payload, user) {
+    if (!user || !user.id) {
+      throw new BadRequestError('User authentication is required to create an order')
+    }
+
+    const { items = [] } = payload || {}
     const normalizedItems = await this._validateAndNormalizeItems(items)
 
     const resolvedStatus = await this._resolveStatus(DEFAULT_STATUS_NAME, {
       allowDefault: true,
     })
 
+    const user_id = this._ensurePositiveInteger(user.id, 'User ID')
+
     const savedOrder = await Order.forge({
-      ...orderData,
+      user_id,
       status_id: resolvedStatus.id,
     }).save()
 
@@ -49,13 +54,15 @@ class OrderService {
     return this.getById(savedOrder.id)
   }
 
-  async getOrdersByUser(username) {
-    if (!username) {
-      throw new BadRequestError('Username is required')
+  async getOrdersByUserId(userId) {
+    if (!userId) {
+      throw new BadRequestError('User ID is required')
     }
 
-    return Order.where({ user_name: username }).fetchAll({
-      withRelated: ['status', 'items', 'opinions'],
+    const normalizedUserId = this._ensurePositiveInteger(userId, 'User ID')
+
+    return Order.where({ user_id: normalizedUserId }).fetchAll({
+      withRelated: ['status', 'items', 'opinions', 'user'],
     })
   }
 
@@ -63,7 +70,7 @@ class OrderService {
     const status = await this._getStatusById(statusId)
 
     return Order.where({ status_id: status.id }).fetchAll({
-      withRelated: ['status', 'items', 'opinions'],
+      withRelated: ['status', 'items', 'opinions', 'user'],
     })
   }
 
@@ -86,14 +93,14 @@ class OrderService {
       throw new BadRequestError('Opinion for this order already exists')
     }
 
-    if (!user?.username) {
+    if (!user || !user.id) {
       throw new ForbiddenError('Authentication required to add an opinion')
     }
 
-    const normalizedRequestUser = user.username.toString().trim().toLowerCase()
-    const normalizedOwner = order.get('user_name')?.toString().trim().toLowerCase()
+    const orderUserId = order.get('user_id')
+    const requestUserId = this._ensurePositiveInteger(user.id, 'User ID')
 
-    if (!normalizedOwner || normalizedOwner !== normalizedRequestUser) {
+    if (!orderUserId || orderUserId !== requestUserId) {
       throw new ForbiddenError('You can only add an opinion to your own order')
     }
 
@@ -144,25 +151,6 @@ class OrderService {
 
     await order.save(patchPayload, { patch: true })
     return this.getById(orderId)
-  }
-
-  _validateOrderData(data = {}) {
-    const userNameValue = data.user_name ?? data.username
-    const user_name = this._ensureNonEmptyString(userNameValue, 'User name')
-    const email = this._validateEmail(data.email)
-    const phone = this._validatePhone(data.phone)
-
-    const result = {
-      user_name,
-      email,
-      phone,
-    }
-
-    if (data.approved_at) {
-      result.approved_at = data.approved_at
-    }
-
-    return result
   }
 
   async _validateAndNormalizeItems(items) {
@@ -240,31 +228,6 @@ class OrderService {
     if (missing.length) {
       throw new BadRequestError(`Products not found for IDs: ${missing.join(', ')}`)
     }
-  }
-
-  _validateEmail(value) {
-    const email = this._ensureNonEmptyString(value, 'Email address')
-    const normalized = email.trim()
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-    if (!emailRegex.test(normalized)) {
-      throw new BadRequestError('Email address has invalid format')
-    }
-
-    return normalized
-  }
-
-  _validatePhone(value) {
-    const phone = this._ensureNonEmptyString(value, 'Phone number')
-    const normalized = phone.replace(/[\s-]/g, '')
-
-    if (!/^\+?\d{6,15}$/.test(normalized)) {
-      throw new BadRequestError(
-        'Phone number must contain only digits, optional spaces or dashes, and may start with +'
-      )
-    }
-
-    return normalized
   }
 
   _ensureNonEmptyString(value, label) {

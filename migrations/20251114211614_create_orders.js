@@ -3,6 +3,14 @@ export function up(knex) {
     table.increments('id').primary()
     table.timestamp('approved_at').nullable()
     table
+      .integer('user_id')
+      .unsigned()
+      .notNullable()
+      .references('id')
+      .inTable('users')
+      .onDelete('CASCADE')
+      .onUpdate('CASCADE')
+    table
       .integer('status_id')
       .unsigned()
       .notNullable()
@@ -10,9 +18,6 @@ export function up(knex) {
       .inTable('statuses')
       .onDelete('RESTRICT')
       .onUpdate('CASCADE')
-    table.string('user_name').notNullable()
-    table.string('email').notNullable()
-    table.string('phone').notNullable()
     table.timestamps(true, true)
   })
 }

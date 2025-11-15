@@ -27,7 +27,7 @@ export default {
 
   async create(req, res) {
     try {
-      const order = await OrderService.createOrder(req.body)
+      const order = await OrderService.createOrder(req.body, req.user)
       res.status(StatusCodes.CREATED).json(order)
     } catch (err) {
       handleControllerError(res, err)
@@ -45,7 +45,22 @@ export default {
 
   async getByUser(req, res) {
     try {
-      const orders = await OrderService.getOrdersByUser(req.params.username)
+      const requestedUserId = req.params.userId ? parseInt(req.params.userId) : null
+      const currentUserId = req.user?.id
+
+      if (!currentUserId) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({ error: 'Authentication required' })
+      }
+
+      const userId = requestedUserId || currentUserId
+
+      if (requestedUserId && requestedUserId !== currentUserId && req.user?.role !== 'ADMIN') {
+        return res
+          .status(StatusCodes.FORBIDDEN)
+          .json({ error: 'You can only view your own orders' })
+      }
+
+      const orders = await OrderService.getOrdersByUserId(userId)
       res.json(orders)
     } catch (err) {
       handleControllerError(res, err)
