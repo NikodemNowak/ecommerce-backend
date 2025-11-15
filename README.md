@@ -1,5 +1,7 @@
 # E-commerce Backend
 
+> **⚠️ UWAGA: To jest wersja deweloperska projektu.**
+
 Prosty backend API do zarządzania produktami, kategoriami, zamówieniami i opiniami w systemie e-commerce. Serwer Express udostępnia endpointy HTTP, a Knex odpowiada za migracje i seedowanie bazy PostgreSQL.
 
 ## Stos technologiczny
@@ -40,6 +42,8 @@ Backend korzysta ze zmiennych środowiskowych (każda ma domyślną wartość):
 
 ## Uruchomienie krok po kroku
 
+> **⚠️ WAŻNE: Jeśli masz starą wersję bazy danych, musisz ją usunąć i uruchomić migracje oraz seedy od nowa.**
+
 1. **Klonowanie i instalacja zależności**
 
    ```
@@ -49,6 +53,12 @@ Backend korzysta ze zmiennych środowiskowych (każda ma domyślną wartość):
    ```
 
 2. **Przygotowanie bazy PostgreSQL**
+
+   > **Uwaga:** Jeśli masz już istniejącą bazę danych z poprzedniej wersji, usuń ją przed kontynuacją:
+   >
+   > ```
+   > DROP DATABASE IF EXISTS ecommerce;
+   > ```
 
    ```
    CREATE DATABASE ecommerce;
@@ -75,71 +85,372 @@ Backend korzysta ze zmiennych środowiskowych (każda ma domyślną wartość):
    ```
    API nasłuchuje pod `http://localhost:3000` (można zmienić przez `PORT`).
 
+## Autentykacja
+
+API wykorzystuje JWT (JSON Web Tokens) do autoryzacji. Większość endpointów wymaga tokenu Bearer w nagłówku `Authorization`.
+
+### Endpointy autentykacji
+
+| Metoda | Ścieżka    | Autoryzacja | Opis                       |
+| ------ | ---------- | ----------- | -------------------------- |
+| POST   | `/login`   | Brak        | Logowanie użytkownika      |
+| POST   | `/refresh` | Brak        | Odświeżanie tokenu dostępu |
+
+#### POST /login
+
+- **Autoryzacja:** Brak (publiczny endpoint)
+- **Body (JSON):**
+  ```json
+  {
+    "username": "admin",
+    "password": "admin"
+  }
+  ```
+- **Walidacja:**
+  - `username` – wymagane, niepuste
+  - `password` – wymagane, niepuste
+- **Odpowiedź sukcesu (200 OK):**
+  ```json
+  {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@example.com",
+      "role": "ADMIN"
+    }
+  }
+  ```
+- **Odpowiedzi błędów:**
+  - `400 Bad Request` – brakuje username lub password
+  - `401 Unauthorized` – nieprawidłowe dane logowania
+
+#### POST /refresh
+
+- **Autoryzacja:** Brak (publiczny endpoint)
+- **Body (JSON):**
+  ```json
+  {
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+  ```
+- **Walidacja:**
+  - `refreshToken` – wymagane, niepuste
+- **Odpowiedź sukcesu (200 OK):**
+  ```json
+  {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+  ```
+
+### Używanie tokenu
+
+Wszystkie endpointy wymagające autoryzacji oczekują tokenu w nagłówku:
+
+```
+Authorization: Bearer <accessToken>
+```
+
 ## Endpointy
-
-### Ogólne
-
-| Metoda | Ścieżka | Opis                                                                    |
-| ------ | ------- | ----------------------------------------------------------------------- |
-| GET    | `/`     | prosty komunikat potwierdzający działanie API                           |
-| POST   | `/init` | jednorazowa inicjalizacja tabeli `products` na podstawie JSON/CSV pliku |
 
 ### Produkty
 
-| Metoda | Ścieżka         | Opis                                                                 |
-| ------ | --------------- | -------------------------------------------------------------------- |
-| GET    | `/products`     | zwraca wszystkie produkty z bazy                                     |
-| GET    | `/products/:id` | pojedynczy produkt (404, gdy brak rekordu)                           |
-| POST   | `/products`     | tworzy produkt na podstawie JSON-a (nazwa, cena, opis, FK kategorii) |
-| PUT    | `/products/:id` | aktualizuje dane produktu                                            |
-| DELETE | `/products/:id` | usuwa produkt i zwraca `{ "message": "Deleted" }`                    |
+| Metoda | Ścieżka                         | Autoryzacja          | Opis                                                            |
+| ------ | ------------------------------- | -------------------- | --------------------------------------------------------------- |
+| GET    | `/products`                     | Token Bearer         | zwraca wszystkie produkty z bazy                                |
+| GET    | `/products/:id`                 | Token Bearer         | pojedynczy produkt (404, gdy brak rekordu)                      |
+| GET    | `/products/:id/seo-description` | Token Bearer         | generuje SEO opis produktu przy użyciu AI (wymaga GROQ_API_KEY) |
+| POST   | `/products`                     | Token Bearer + ADMIN | tworzy produkt na podstawie JSON-a                              |
+| PUT    | `/products/:id`                 | Token Bearer + ADMIN | aktualizuje dane produktu                                       |
+
+#### GET /products
+
+- **Autoryzacja:** Wymagany token Bearer
+- **Odpowiedź sukcesu (200 OK):** Tablica produktów z relacją kategorii
+
+#### GET /products/:id
+
+- **Autoryzacja:** Wymagany token Bearer
+- **Parametry:**
+  - `id` – ID produktu (liczba całkowita)
+- **Odpowiedzi:**
+  - `200 OK` – zwraca produkt z kategorią
+  - `404 Not Found` – produkt nie istnieje
+
+#### GET /products/:id/seo-description
+
+- **Autoryzacja:** Wymagany token Bearer
+- **Parametry:**
+  - `id` – ID produktu (liczba całkowita)
+- **Odpowiedź sukcesu (200 OK):**
+  ```json
+  {
+    "product_id": 1,
+    "product_name": "Laptop",
+    "seo_description": "<html>...</html>"
+  }
+  ```
+- **Odpowiedzi błędów:**
+  - `400 Bad Request` – brak GROQ_API_KEY lub błąd generowania
+  - `404 Not Found` – produkt nie istnieje
+
+#### POST /products
+
+- **Autoryzacja:** Wymagany token Bearer + rola ADMIN
+- **Body (JSON):**
+  ```json
+  {
+    "name": "Laptop",
+    "description": "Wydajny laptop do pracy",
+    "price": 2999.99,
+    "weight": 1.5,
+    "category_id": 1
+  }
+  ```
+- **Walidacja:**
+  - `name` – wymagane, niepusty string
+  - `description` – wymagane, niepusty string
+  - `price` – wymagane, liczba dodatnia
+  - `weight` – wymagane, liczba dodatnia
+  - `category_id` – wymagane, dodatnia liczba całkowita (musi istnieć w tabeli categories)
+- **Odpowiedzi:**
+  - `201 Created` – zwraca utworzony produkt
+  - `400 Bad Request` – błędne dane wejściowe
+  - `403 Forbidden` – brak uprawnień (nie jesteś ADMIN)
+
+#### PUT /products/:id
+
+- **Autoryzacja:** Wymagany token Bearer + rola ADMIN
+- **Parametry:**
+  - `id` – ID produktu (liczba całkowita)
+- **Body (JSON):** Wszystkie pola opcjonalne (można zaktualizować tylko wybrane)
+  ```json
+  {
+    "name": "Zaktualizowany laptop",
+    "price": 2499.99
+  }
+  ```
+- **Walidacja:** (podobnie jak POST, ale wszystkie pola opcjonalne)
+  - `name` – opcjonalne, jeśli podane: niepusty string
+  - `description` – opcjonalne, jeśli podane: niepusty string
+  - `price` – opcjonalne, jeśli podane: liczba dodatnia
+  - `weight` – opcjonalne, jeśli podane: liczba dodatnia
+  - `category_id` – opcjonalne, jeśli podane: dodatnia liczba całkowita
+- **Odpowiedzi:**
+  - `200 OK` – zwraca zaktualizowany produkt
+  - `400 Bad Request` – błędne dane wejściowe
+  - `403 Forbidden` – brak uprawnień
+  - `404 Not Found` – produkt nie istnieje
 
 ### Kategorie
 
-| Metoda | Ścieżka       | Opis                                             |
-| ------ | ------------- | ------------------------------------------------ |
-| GET    | `/categories` | lista wszystkich kategorii z tabeli `categories` |
+| Metoda | Ścieżka       | Autoryzacja | Opis                                             |
+| ------ | ------------- | ----------- | ------------------------------------------------ |
+| GET    | `/categories` | Brak        | lista wszystkich kategorii z tabeli `categories` |
+
+#### GET /categories
+
+- **Autoryzacja:** Brak (publiczny endpoint)
+- **Odpowiedź sukcesu (200 OK):** Tablica kategorii
 
 ### Zamówienia
 
-| Metoda | Ścieżka                    | Opis                                                                                             |
-| ------ | -------------------------- | ------------------------------------------------------------------------------------------------ |
-| GET    | `/orders`                  | zwraca pełną listę zamówień wraz z pozycjami i opiniami                                          |
-| GET    | `/orders/:id`              | szczegóły pojedynczego zamówienia (łącznie z opiniami)                                           |
-| GET    | `/orders/user/:username`   | zamówienia przypisane do konkretnego użytkownika                                                 |
-| GET    | `/orders/status/:statusId` | zamówienia o wskazanym statusie według ID (np. `3` dla `ANULOWANE`)                              |
-| PATCH  | `/orders/:id`              | zmiana statusu – w body wymagane `{ "status": "ZATWIERDZONE" }` lub odpowiedni JSON Patch        |
-| POST   | `/orders/:id/opinions`     | dodaje opinię do zamówienia (tylko właściciel zamówienia, status `ZREALIZOWANE` lub `ANULOWANE`) |
+| Metoda | Ścieżka                    | Autoryzacja          | Opis                                                                                             |
+| ------ | -------------------------- | -------------------- | ------------------------------------------------------------------------------------------------ |
+| GET    | `/orders`                  | Token Bearer + ADMIN | zwraca pełną listę zamówień wraz z pozycjami i opiniami                                          |
+| GET    | `/orders/:id`              | Token Bearer         | szczegóły pojedynczego zamówienia (łącznie z opiniami)                                           |
+| GET    | `/orders/user`             | Token Bearer         | zamówienia zalogowanego użytkownika                                                              |
+| GET    | `/orders/user/:userId`     | Token Bearer         | zamówienia użytkownika (tylko własne lub ADMIN może zobaczyć inne)                               |
+| GET    | `/orders/status/:statusId` | Token Bearer + ADMIN | zamówienia o wskazanym statusie według ID (np. `3` dla `ANULOWANE`)                              |
+| POST   | `/orders`                  | Token Bearer         | tworzy nowe zamówienie                                                                           |
+| PATCH  | `/orders/:id`              | Token Bearer + ADMIN | zmiana statusu – w body wymagane `{ "status": "ZATWIERDZONE" }` lub odpowiedni JSON Patch        |
+| POST   | `/orders/:id/opinions`     | Token Bearer         | dodaje opinię do zamówienia (tylko właściciel zamówienia, status `ZREALIZOWANE` lub `ANULOWANE`) |
 
-#### Dodawanie opinii do zamówienia
+#### GET /orders
 
-- **Endpoint:** `POST /orders/{id}/opinions`
-- **Wymaga autoryzacji:** tak (`Authorization: Bearer <token>`). Opinie może dodać tylko użytkownik, który utworzył dane zamówienie.
-- **Warunki biznesowe:** opinie można dodawać jedynie dla zamówień ze statusem `ZREALIZOWANE` lub `ANULOWANE`.
+- **Autoryzacja:** Wymagany token Bearer + rola ADMIN
+- **Odpowiedź sukcesu (200 OK):** Tablica wszystkich zamówień z relacjami (status, items, opinions, user)
+
+#### GET /orders/:id
+
+- **Autoryzacja:** Wymagany token Bearer
+- **Parametry:**
+  - `id` – ID zamówienia (liczba całkowita)
+- **Odpowiedzi:**
+  - `200 OK` – zwraca zamówienie z relacjami
+  - `404 Not Found` – zamówienie nie istnieje
+
+#### GET /orders/user
+
+- **Autoryzacja:** Wymagany token Bearer
+- **Opis:** Zwraca zamówienia zalogowanego użytkownika
+- **Odpowiedź sukcesu (200 OK):** Tablica zamówień użytkownika
+
+#### GET /orders/user/:userId
+
+- **Autoryzacja:** Wymagany token Bearer
+- **Parametry:**
+  - `userId` – ID użytkownika (liczba całkowita)
+- **Ograniczenia dostępu:**
+  - Użytkownik może zobaczyć tylko swoje zamówienia
+  - ADMIN może zobaczyć zamówienia dowolnego użytkownika
+- **Odpowiedzi:**
+  - `200 OK` – zwraca zamówienia użytkownika
+  - `403 Forbidden` – próba zobaczenia zamówień innego użytkownika bez uprawnień ADMIN
+
+#### GET /orders/status/:statusId
+
+- **Autoryzacja:** Wymagany token Bearer + rola ADMIN
+- **Parametry:**
+  - `statusId` – ID statusu (liczba całkowita, np. `3` dla `ANULOWANE`)
+- **Odpowiedź sukcesu (200 OK):** Tablica zamówień o wskazanym statusie
+
+#### POST /orders
+
+- **Autoryzacja:** Wymagany token Bearer
 - **Body (JSON):**
+  ```json
+  {
+    "items": [
+      {
+        "product_id": 1,
+        "quantity": 2,
+        "unit_price": 99.99
+      },
+      {
+        "product_id": 2,
+        "quantity": 1,
+        "unit_price": 149.99
+      }
+    ]
+  }
+  ```
+- **Walidacja:**
+  - `items` – wymagane, tablica z co najmniej jednym elementem
+  - Każdy element `items`:
+    - `product_id` (lub `productId`) – wymagane, dodatnia liczba całkowita (produkt musi istnieć)
+    - `quantity` – wymagane, dodatnia liczba całkowita
+    - `unit_price` (lub `unitPrice`) – wymagane, liczba dodatnia
+- **Odpowiedzi:**
+  - `201 Created` – zwraca utworzone zamówienie z relacjami
+  - `400 Bad Request` – błędne dane wejściowe (np. pusty items, nieistniejący produkt)
+- **Uwaga:** Zamówienie jest automatycznie przypisywane do zalogowanego użytkownika i otrzymuje status `NIEZATWIERDZONE`
 
+#### PATCH /orders/:id
+
+- **Autoryzacja:** Wymagany token Bearer + rola ADMIN
+- **Parametry:**
+  - `id` – ID zamówienia (liczba całkowita)
+- **Body (JSON):** Możliwe formaty:
+  ```json
+  {
+    "status": "ZATWIERDZONE"
+  }
+  ```
+  lub JSON Patch:
+  ```json
+  [
+    {
+      "op": "replace",
+      "path": "/status",
+      "value": "ZATWIERDZONE"
+    }
+  ]
+  ```
+- **Walidacja:**
+  - `status` – wymagane, nazwa statusu (np. "ZATWIERDZONE", "ZREALIZOWANE", "ANULOWANE") lub ID statusu
+- **Ograniczenia biznesowe:**
+  - Nie można zmienić statusu zamówienia anulowanego (`ANULOWANE`)
+  - Nie można zmienić statusu zamówienia zrealizowanego (`ZREALIZOWANE`)
+  - Nie można cofnąć statusu wstecz (np. z `ZATWIERDZONE` do `NIEZATWIERDZONE`)
+- **Odpowiedzi:**
+  - `200 OK` – zwraca zaktualizowane zamówienie
+  - `400 Bad Request` – błędne dane wejściowe lub naruszenie reguł biznesowych
+  - `403 Forbidden` – brak uprawnień
+  - `404 Not Found` – zamówienie nie istnieje
+
+#### POST /orders/:id/opinions
+
+- **Endpoint:** `POST /orders/:id/opinions`
+- **Autoryzacja:** Wymagany token Bearer. Opinie może dodać tylko użytkownik, który utworzył dane zamówienie.
+- **Parametry:**
+  - `id` – ID zamówienia (liczba całkowita)
+- **Warunki biznesowe:**
+  - Opinie można dodawać jedynie dla zamówień ze statusem `ZREALIZOWANE` lub `ANULOWANE`
+  - Do każdego zamówienia można dodać tylko jedną opinię
+- **Body (JSON):**
   ```json
   {
     "rating": 5,
     "content": "Profesjonalna obsługa – informacja o opóźnieniu przyszła od razu."
   }
   ```
-
 - **Walidacja:**
-  1. `rating` – liczba całkowita od 1 do 5.
-  2. `content` – niepusty tekst.
-
+  - `rating` – wymagane, liczba całkowita od 1 do 5
+  - `content` – wymagane, niepusty tekst
 - **Odpowiedzi:**
-  - `201 Created` – zwraca utworzoną opinię.
-  - `400 Bad Request` – błędne dane wejściowe lub opinia próbowała zostać dodana dla zamówienia z niedozwolonym statusem.
-  - `403 Forbidden` – brak uprawnień (np. inny użytkownik niż autor zamówienia).
-  - `404 Not Found` – wskazane zamówienie nie istnieje.
+  - `201 Created` – zwraca utworzoną opinię
+  - `400 Bad Request` – błędne dane wejściowe, opinia już istnieje lub zamówienie ma niedozwolony status
+  - `403 Forbidden` – brak uprawnień (inny użytkownik niż autor zamówienia)
+  - `404 Not Found` – wskazane zamówienie nie istnieje
 
 ### Statusy
 
-| Metoda | Ścieżka   | Opis                                     |
-| ------ | --------- | ---------------------------------------- |
-| GET    | `/status` | zwraca seedowaną listę statusów zamówień |
+| Metoda | Ścieżka   | Autoryzacja | Opis                                     |
+| ------ | --------- | ----------- | ---------------------------------------- |
+| GET    | `/status` | Brak        | zwraca seedowaną listę statusów zamówień |
+
+#### GET /status
+
+- **Autoryzacja:** Brak (publiczny endpoint)
+- **Odpowiedź sukcesu (200 OK):** Tablica statusów zamówień
+
+### Inicjalizacja produktów
+
+| Metoda | Ścieżka | Autoryzacja          | Opis                                                                    |
+| ------ | ------- | -------------------- | ----------------------------------------------------------------------- |
+| POST   | `/init` | Token Bearer + ADMIN | jednorazowa inicjalizacja tabeli `products` na podstawie JSON/CSV pliku |
+
+#### POST /init
+
+- **Autoryzacja:** Wymagany token Bearer + rola ADMIN
+- **Body:** Możliwe formaty:
+  1. **Upload pliku (multipart/form-data):**
+     - Pole `file` – plik JSON lub CSV (max 5MB)
+  2. **JSON array bezpośrednio:**
+     ```json
+     [
+       {
+         "name": "Produkt 1",
+         "description": "Opis",
+         "price": 99.99,
+         "weight": 0.5,
+         "category_id": 1
+       }
+     ]
+     ```
+  3. **JSON z polem products:**
+     ```json
+     {
+       "products": [...]
+     }
+     ```
+- **Walidacja:** Każdy produkt musi spełniać wymagania jak w `POST /products`
+- **Ograniczenia:**
+  - Inicjalizacja może być wykonana tylko raz (jeśli w bazie są już produkty, zwróci błąd)
+- **Odpowiedzi:**
+  - `200 OK` – zwraca liczbę zainicjalizowanych produktów
+    ```json
+    {
+      "message": "Successfully initialized 10 products",
+      "count": 10
+    }
+    ```
+  - `400 Bad Request` – błędne dane wejściowe
+  - `403 Forbidden` – brak uprawnień
+  - `409 Conflict` – produkty są już zainicjalizowane
 
 ## Przegląd schematu bazy
 
