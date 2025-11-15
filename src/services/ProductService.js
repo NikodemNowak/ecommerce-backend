@@ -1,4 +1,5 @@
 import Product from '../models/Product.js'
+import { NotFoundError } from '../errors/AppError.js'
 
 class ProductService {
   async getAll() {
@@ -11,7 +12,7 @@ class ProductService {
       .catch(() => null)
 
     if (!product) {
-      throw new Error('Not found')
+      throw new NotFoundError('Product not found')
     }
 
     return product

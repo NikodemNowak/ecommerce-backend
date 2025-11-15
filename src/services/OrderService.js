@@ -1,6 +1,7 @@
 import Order from '../models/Order.js'
 import OrderItem from '../models/OrderItem.js'
 import Status from '../models/Status.js'
+import { BadRequestError, NotFoundError } from '../errors/AppError.js'
 
 const DEFAULT_STATUS_NAME = 'NIEZATWIERDZONE'
 
@@ -17,7 +18,7 @@ class OrderService {
       .catch(() => null)
 
     if (!order) {
-      throw this._notFoundError('Order not found')
+      throw new NotFoundError('Order not found')
     }
 
     return order
@@ -28,7 +29,7 @@ class OrderService {
     const orderData = this._extractOrderFields(rest)
 
     if (!orderData.user_name || !orderData.email || !orderData.phone) {
-      throw this._badRequestError('Missing required order data (user_name, email, phone)')
+      throw new BadRequestError('Missing required order data (user_name, email, phone)')
     }
 
     const resolvedStatus = await this._resolveStatus(DEFAULT_STATUS_NAME, {
@@ -51,7 +52,7 @@ class OrderService {
 
   async getOrdersByUser(username) {
     if (!username) {
-      throw this._badRequestError('Username is required')
+      throw new BadRequestError('Username is required')
     }
 
     return Order.where({ user_name: username }).fetchAll({
@@ -74,11 +75,11 @@ class OrderService {
     const currentStatus = order.related('status').get('name')
 
     if (currentStatus === 'ANULOWANE') {
-      throw this._badRequestError('Cannot complete cancelled order')
+      throw new BadRequestError('Cannot complete cancelled order')
     }
 
     if (currentStatus === 'ZREALIZOWANE') {
-      throw this._badRequestError('Cannot change status of completed order')
+      throw new BadRequestError('Cannot change status of completed order')
     }
 
     await order.save({ status_id: newStatus.id }, { patch: true })
@@ -136,7 +137,7 @@ class OrderService {
 
     if (!statusInput) {
       if (!allowDefault) {
-        throw this._badRequestError('Status value is required')
+        throw new BadRequestError('Status value is required')
       }
 
       return this._getDefaultStatus()
@@ -155,7 +156,7 @@ class OrderService {
 
   async _getStatusById(id) {
     if (!id) {
-      throw this._badRequestError('Status ID is required')
+      throw new BadRequestError('Status ID is required')
     }
 
     const status = await Status.where({ id })
@@ -163,7 +164,7 @@ class OrderService {
       .catch(() => null)
 
     if (!status) {
-      throw this._notFoundError('Status not found')
+      throw new NotFoundError('Status not found')
     }
 
     return status
@@ -171,7 +172,7 @@ class OrderService {
 
   async _getStatusByName(name) {
     if (!name) {
-      throw this._badRequestError('Status name is required')
+      throw new BadRequestError('Status name is required')
     }
 
     const normalized = name.toString().toUpperCase()
@@ -181,7 +182,7 @@ class OrderService {
       .catch(() => null)
 
     if (!status) {
-      throw this._notFoundError('Status not found')
+      throw new NotFoundError('Status not found')
     }
 
     return status
@@ -193,18 +194,6 @@ class OrderService {
     }
 
     return typeof value === 'string' && /^\d+$/.test(value)
-  }
-
-  _notFoundError(message) {
-    const error = new Error(message)
-    error.status = 404
-    return error
-  }
-
-  _badRequestError(message) {
-    const error = new Error(message)
-    error.status = 400
-    return error
   }
 }
 

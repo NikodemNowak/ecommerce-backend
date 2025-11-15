@@ -1,4 +1,6 @@
+import { StatusCodes } from 'http-status-codes'
 import OrderService from '../services/OrderService.js'
+import { handleControllerError } from '../utils/controllerErrorHandler.js'
 
 const extractStatusFromBody = (body) => {
   if (!body) {
@@ -19,16 +21,16 @@ export default {
       const orders = await OrderService.getAllOrders()
       res.json(orders)
     } catch (err) {
-      res.status(err.status || 500).json({ error: err.message })
+      handleControllerError(res, err)
     }
   },
 
   async create(req, res) {
     try {
       const order = await OrderService.createOrder(req.body)
-      res.status(201).json(order)
+      res.status(StatusCodes.CREATED).json(order)
     } catch (err) {
-      res.status(err.status || 500).json({ error: err.message })
+      handleControllerError(res, err)
     }
   },
 
@@ -37,7 +39,7 @@ export default {
       const order = await OrderService.getById(req.params.id)
       res.json(order)
     } catch (err) {
-      res.status(err.status || 500).json({ error: err.message })
+      handleControllerError(res, err)
     }
   },
 
@@ -46,7 +48,7 @@ export default {
       const orders = await OrderService.getOrdersByUser(req.params.username)
       res.json(orders)
     } catch (err) {
-      res.status(err.status || 500).json({ error: err.message })
+      handleControllerError(res, err)
     }
   },
 
@@ -55,7 +57,7 @@ export default {
       const orders = await OrderService.getOrdersByStatusId(req.params.statusId)
       res.json(orders)
     } catch (err) {
-      res.status(err.status || 500).json({ error: err.message })
+      handleControllerError(res, err)
     }
   },
 
@@ -64,13 +66,15 @@ export default {
       const statusValue = extractStatusFromBody(req.body)
 
       if (!statusValue) {
-        return res.status(400).json({ error: 'Missing status value in request body' })
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json({ error: 'Missing status value in request body' })
       }
 
       const updated = await OrderService.changeStatus(req.params.id, statusValue)
       res.json(updated)
     } catch (err) {
-      res.status(err.status || 500).json({ error: err.message })
+      handleControllerError(res, err)
     }
   },
 }

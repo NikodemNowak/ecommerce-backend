@@ -1,4 +1,5 @@
 import categoryService from '../services/CategoryService.js'
+import { handleControllerError } from '../utils/controllerErrorHandler.js'
 
 export default {
   async getAll(req, res) {
@@ -6,8 +7,7 @@ export default {
       const categories = await categoryService.getAll()
       res.json(categories)
     } catch (err) {
-      console.error(err)
-      res.status(500).json({ error: 'Server error' })
+      handleControllerError(res, err)
     }
   },
 }

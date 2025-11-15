@@ -15,6 +15,7 @@
   "dependencies": {
     "bookshelf": "^1.2.0",
     "express": "^5.1.0",
+    "http-status-codes": "^2.3.0",
     "knex": "^0.21.21",
     "pg": "^8.16.3"
   },

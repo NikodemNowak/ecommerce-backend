@@ -1,4 +1,5 @@
 import statusService from '../services/StatusService.js'
+import { handleControllerError } from '../utils/controllerErrorHandler.js'
 
 export default {
   async getAll(_, res) {
@@ -6,8 +7,7 @@ export default {
       const statuses = await statusService.getAll()
       res.json(statuses)
     } catch (err) {
-      console.error(err)
-      res.status(500).json({ error: 'Server error' })
+      handleControllerError(res, err)
     }
   },
 }
