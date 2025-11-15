@@ -1,5 +1,6 @@
 import Product from '../models/Product.js'
-import { BadRequestError, NotFoundError } from '../errors/AppError.js'
+import bookshelf from '../db/index.js'
+import { BadRequestError, ConflictError, NotFoundError } from '../errors/AppError.js'
 
 class ProductService {
   async getAll() {
@@ -27,6 +28,38 @@ class ProductService {
     const product = await this.getById(id)
     const payload = this._validateProductPayload(data)
     return product.save(payload)
+  }
+
+  async initializeProducts(records) {
+    if (!Array.isArray(records) || !records.length) {
+      throw new BadRequestError('No product records supplied')
+    }
+
+    const existingCountRow = await bookshelf.knex('products').count('id as count').first()
+    const existingCount = Number(existingCountRow?.count ?? 0)
+
+    if (existingCount > 0) {
+      throw new ConflictError('Products are already initialized')
+    }
+
+    const normalized = records.map((record, index) => {
+      try {
+        return this._validateProductPayload(record)
+      } catch (error) {
+        if (error instanceof BadRequestError) {
+          throw new BadRequestError(`Row ${index + 1}: ${error.message}`)
+        }
+        throw error
+      }
+    })
+
+    await bookshelf.transaction(async (trx) => {
+      for (const payload of normalized) {
+        await Product.forge(payload).save(null, { transacting: trx })
+      }
+    })
+
+    return normalized.length
   }
 
   _validateProductPayload(data, options = {}) {

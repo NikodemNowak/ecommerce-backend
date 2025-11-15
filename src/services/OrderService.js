@@ -61,7 +61,7 @@ class OrderService {
     const status = await this._getStatusById(statusId)
 
     return Order.where({ status_id: status.id }).fetchAll({
-      withRelated: ['status', 'items', 'opinions'],
+      withRelated: ['status', 'items'],
     })
   }
 

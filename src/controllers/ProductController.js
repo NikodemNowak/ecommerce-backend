@@ -1,6 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 import productService from '../services/ProductService.js'
 import { handleControllerError } from '../utils/controllerErrorHandler.js'
+import { parseProductsFromUpload, normalizeProductsPayload } from '../utils/productInitParser.js'
+import { BadRequestError } from '../errors/AppError.js'
 
 export default {
   async getAll(req, res) {
@@ -44,6 +46,33 @@ export default {
       const { id } = req.params
       const seoDesc = await productService.generateSeoDescription(id)
       res.json({ seoDescription: seoDesc })
+    } catch (err) {
+      handleControllerError(res, err)
+    }
+  },
+
+  async initialize(req, res) {
+    try {
+      let records
+
+      if (req.file) {
+        records = parseProductsFromUpload(req.file)
+      } else if (Array.isArray(req.body)) {
+        records = normalizeProductsPayload(req.body)
+      } else if (Array.isArray(req.body?.products)) {
+        records = normalizeProductsPayload(req.body.products)
+      } else {
+        throw new BadRequestError(
+          'Provide product data as a JSON array or upload a JSON/CSV file under the "file" field'
+        )
+      }
+
+      const count = await productService.initializeProducts(records)
+
+      res.status(StatusCodes.OK).json({
+        message: `Successfully initialized ${count} products`,
+        count,
+      })
     } catch (err) {
       handleControllerError(res, err)
     }

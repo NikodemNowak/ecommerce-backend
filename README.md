@@ -79,9 +79,10 @@ Backend korzysta ze zmiennych środowiskowych (każda ma domyślną wartość):
 
 ### Ogólne
 
-| Metoda | Ścieżka | Opis                                          |
-| ------ | ------- | --------------------------------------------- |
-| GET    | `/`     | prosty komunikat potwierdzający działanie API |
+| Metoda | Ścieżka | Opis                                                                    |
+| ------ | ------- | ----------------------------------------------------------------------- |
+| GET    | `/`     | prosty komunikat potwierdzający działanie API                           |
+| POST   | `/init` | jednorazowa inicjalizacja tabeli `products` na podstawie JSON/CSV pliku |
 
 ### Produkty
 

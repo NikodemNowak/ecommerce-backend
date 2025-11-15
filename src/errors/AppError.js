@@ -22,4 +22,10 @@ class NotFoundError extends AppError {
   }
 }
 
-export { AppError, BadRequestError, NotFoundError }
+class ConflictError extends AppError {
+  constructor(message = 'Conflict') {
+    super(message, StatusCodes.CONFLICT)
+  }
+}
+
+export { AppError, BadRequestError, NotFoundError, ConflictError }
