@@ -38,4 +38,14 @@ export default {
       handleControllerError(res, err)
     }
   },
+
+  async seoDescription(req, res) {
+    try {
+      const { id } = req.params
+      const seoDesc = await productService.generateSeoDescription(id)
+      res.json({ seoDescription: seoDesc })
+    } catch (err) {
+      handleControllerError(res, err)
+    }
+  },
 }

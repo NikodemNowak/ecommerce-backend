@@ -126,6 +126,71 @@ class ProductService {
     }
     return asNumber
   }
+
+  async generateSeoDescription(id) {
+    const GROQ_KEY = process.env.GROQ_API_KEY || ''
+
+    if (!GROQ_KEY) {
+      throw new BadRequestError('GROQ API key is not configured')
+    }
+
+    const product = await this.getById(id)
+
+    const name = product.get('name')
+    const description = product.get('description')
+    const price = product.get('price')
+    const weight = product.get('weight')
+
+    const body = {
+      model: 'openai/gpt-oss-20b',
+      messages: [
+        {
+          role: 'user',
+          content: `
+Generate a complete HTML5 product page for the following product:
+Product Name: ${name}
+Description: ${description}
+Price: $${price}
+Weight: ${weight}kg
+
+Output format - Return a COMPLETE, VALID HTML5 document optimized for SEO, including meta tags and structured data.
+          `.trim(),
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+    }
+
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${GROQ_KEY}`,
+        },
+        body: JSON.stringify(body),
+      })
+
+      if (!response.ok) {
+        throw new Error(`GROQ API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+      const seoDescription = data.choices[0]?.message?.content?.trim()
+
+      if (!seoDescription) {
+        throw new Error('No SEO description generated')
+      }
+
+      return {
+        product_id: id,
+        product_name: name,
+        seo_description: seoDescription,
+      }
+    } catch (error) {
+      throw new BadRequestError(`Failed to generate SEO description: ${error.message}`)
+    }
+  }
 }
 
 export default new ProductService()

@@ -356,3 +356,7 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/node,webstorm,jetbrains,windows
+
+
+src/db/index.js
+knexfile.js
