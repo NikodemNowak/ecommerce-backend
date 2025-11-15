@@ -28,4 +28,10 @@ class ConflictError extends AppError {
   }
 }
 
-export { AppError, BadRequestError, NotFoundError, ConflictError }
+class ForbiddenError extends AppError {
+  constructor(message = 'Forbidden') {
+    super(message, StatusCodes.FORBIDDEN)
+  }
+}
+
+export { AppError, BadRequestError, NotFoundError, ConflictError, ForbiddenError }

@@ -15,5 +15,6 @@ router.get(
 router.get('/user/:username', authenticateToken, OrderController.getByUser)
 router.get('/:id', authenticateToken, OrderController.getById)
 router.patch('/:id', authenticateToken, authorizeRole('ADMIN'), OrderController.changeStatus)
+router.post('/:id/opinions', authenticateToken, OrderController.addOpinion)
 
 export default router

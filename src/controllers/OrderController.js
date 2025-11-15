@@ -77,4 +77,13 @@ export default {
       handleControllerError(res, err)
     }
   },
+
+  async addOpinion(req, res) {
+    try {
+      const opinion = await OrderService.addOpinion(req.params.id, req.user, req.body)
+      res.status(StatusCodes.CREATED).json(opinion)
+    } catch (err) {
+      handleControllerError(res, err)
+    }
+  },
 }

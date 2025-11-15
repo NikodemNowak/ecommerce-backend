@@ -102,13 +102,38 @@ Backend korzysta ze zmiennych środowiskowych (każda ma domyślną wartość):
 
 ### Zamówienia
 
-| Metoda | Ścieżka                      | Opis                                                            |
-| ------ | ---------------------------- | --------------------------------------------------------------- |
-| GET    | `/orders`                    | zwraca pełną listę zamówień wraz z pozycjami                    |
-| GET    | `/orders/:id`                | szczegóły pojedynczego zamówienia                               |
-| GET    | `/orders/user/:username`     | zamówienia przypisane do konkretnego użytkownika                |
-| GET    | `/orders/status/:statusName` | zamówienia o wskazanym statusie (np. `ZREALIZOWANE`)            |
-| PUT    | `/orders/:id`                | zmiana statusu – w body wymagane `{ "status": "ZATWIERDZONE" }` |
+| Metoda | Ścieżka                    | Opis                                                                                             |
+| ------ | -------------------------- | ------------------------------------------------------------------------------------------------ |
+| GET    | `/orders`                  | zwraca pełną listę zamówień wraz z pozycjami i opiniami                                          |
+| GET    | `/orders/:id`              | szczegóły pojedynczego zamówienia (łącznie z opiniami)                                           |
+| GET    | `/orders/user/:username`   | zamówienia przypisane do konkretnego użytkownika                                                 |
+| GET    | `/orders/status/:statusId` | zamówienia o wskazanym statusie według ID (np. `3` dla `ANULOWANE`)                              |
+| PATCH  | `/orders/:id`              | zmiana statusu – w body wymagane `{ "status": "ZATWIERDZONE" }` lub odpowiedni JSON Patch        |
+| POST   | `/orders/:id/opinions`     | dodaje opinię do zamówienia (tylko właściciel zamówienia, status `ZREALIZOWANE` lub `ANULOWANE`) |
+
+#### Dodawanie opinii do zamówienia
+
+- **Endpoint:** `POST /orders/{id}/opinions`
+- **Wymaga autoryzacji:** tak (`Authorization: Bearer <token>`). Opinie może dodać tylko użytkownik, który utworzył dane zamówienie.
+- **Warunki biznesowe:** opinie można dodawać jedynie dla zamówień ze statusem `ZREALIZOWANE` lub `ANULOWANE`.
+- **Body (JSON):**
+
+  ```json
+  {
+    "rating": 5,
+    "content": "Profesjonalna obsługa – informacja o opóźnieniu przyszła od razu."
+  }
+  ```
+
+- **Walidacja:**
+  1. `rating` – liczba całkowita od 1 do 5.
+  2. `content` – niepusty tekst.
+
+- **Odpowiedzi:**
+  - `201 Created` – zwraca utworzoną opinię.
+  - `400 Bad Request` – błędne dane wejściowe lub opinia próbowała zostać dodana dla zamówienia z niedozwolonym statusem.
+  - `403 Forbidden` – brak uprawnień (np. inny użytkownik niż autor zamówienia).
+  - `404 Not Found` – wskazane zamówienie nie istnieje.
 
 ### Statusy
 

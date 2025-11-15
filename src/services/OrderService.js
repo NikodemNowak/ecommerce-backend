@@ -2,21 +2,23 @@ import Order from '../models/Order.js'
 import OrderItem from '../models/OrderItem.js'
 import Product from '../models/Product.js'
 import Status from '../models/Status.js'
-import { BadRequestError, NotFoundError } from '../errors/AppError.js'
+import Opinion from '../models/Opinion.js'
+import { BadRequestError, NotFoundError, ForbiddenError } from '../errors/AppError.js'
 
 const DEFAULT_STATUS_NAME = 'NIEZATWIERDZONE'
 const STATUS_SEQUENCE = ['NIEZATWIERDZONE', 'ZATWIERDZONE', 'ZREALIZOWANE']
+const OPINION_ALLOWED_STATUSES = ['ZREALIZOWANE', 'ANULOWANE']
 
 class OrderService {
   async getAllOrders() {
     return Order.fetchAll({
-      withRelated: ['status', 'items'],
+      withRelated: ['status', 'items', 'opinions'],
     })
   }
 
   async getById(id) {
     const order = await Order.where({ id })
-      .fetch({ withRelated: ['status', 'items'] })
+      .fetch({ withRelated: ['status', 'items', 'opinions'] })
       .catch(() => null)
 
     if (!order) {
@@ -53,7 +55,7 @@ class OrderService {
     }
 
     return Order.where({ user_name: username }).fetchAll({
-      withRelated: ['status', 'items'],
+      withRelated: ['status', 'items', 'opinions'],
     })
   }
 
@@ -61,8 +63,55 @@ class OrderService {
     const status = await this._getStatusById(statusId)
 
     return Order.where({ status_id: status.id }).fetchAll({
-      withRelated: ['status', 'items'],
+      withRelated: ['status', 'items', 'opinions'],
     })
+  }
+
+  async addOpinion(orderId, user = {}, payload = {}) {
+    const normalizedOrderId = this._ensurePositiveInteger(orderId, 'Order ID')
+
+    const order = await Order.where({ id: normalizedOrderId })
+      .fetch({ withRelated: ['status'] })
+      .catch(() => null)
+
+    if (!order) {
+      throw new NotFoundError('Order not found')
+    }
+
+    const existingOpinion = await Opinion.where({ order_id: normalizedOrderId })
+      .fetch()
+      .catch(() => null)
+
+    if (existingOpinion) {
+      throw new BadRequestError('Opinion for this order already exists')
+    }
+
+    if (!user?.username) {
+      throw new ForbiddenError('Authentication required to add an opinion')
+    }
+
+    const normalizedRequestUser = user.username.toString().trim().toLowerCase()
+    const normalizedOwner = order.get('user_name')?.toString().trim().toLowerCase()
+
+    if (!normalizedOwner || normalizedOwner !== normalizedRequestUser) {
+      throw new ForbiddenError('You can only add an opinion to your own order')
+    }
+
+    const statusName = order.related('status')?.get('name')?.toString().toUpperCase()
+
+    if (!OPINION_ALLOWED_STATUSES.includes(statusName)) {
+      throw new BadRequestError('Opinion can only be added for completed or cancelled orders')
+    }
+
+    const { rating, content } = this._validateOpinionPayload(payload)
+
+    const opinion = await Opinion.forge({
+      order_id: normalizedOrderId,
+      rating,
+      content,
+    }).save()
+
+    return opinion
   }
 
   async changeStatus(orderId, statusInput) {
@@ -87,7 +136,13 @@ class OrderService {
       )
     }
 
-    await order.save({ status_id: newStatus.id }, { patch: true })
+    const patchPayload = { status_id: newStatus.id }
+
+    if (this._shouldSetApprovalDate(normalizedNext, order.get('approved_at'))) {
+      patchPayload.approved_at = new Date().toISOString()
+    }
+
+    await order.save(patchPayload, { patch: true })
     return this.getById(orderId)
   }
 
@@ -144,6 +199,32 @@ class OrderService {
       quantity: normalizedQuantity,
       unit_price: normalizedPrice,
     }
+  }
+
+  _validateOpinionPayload(payload = {}) {
+    if (!payload || typeof payload !== 'object') {
+      throw new BadRequestError('Opinion payload is required')
+    }
+
+    const rating = Number(payload.rating)
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new BadRequestError('Rating must be an integer between 1 and 5')
+    }
+
+    const content = this._ensureNonEmptyString(payload.content, 'Opinion content')
+
+    return {
+      rating,
+      content,
+    }
+  }
+
+  _shouldSetApprovalDate(nextStatus, currentApprovedAt) {
+    if (currentApprovedAt) {
+      return false
+    }
+
+    return ['ZATWIERDZONE', 'ZREALIZOWANE'].includes(nextStatus)
   }
 
   async _assertProductsExist(items) {
