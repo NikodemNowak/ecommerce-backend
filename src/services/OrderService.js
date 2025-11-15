@@ -1,9 +1,11 @@
 import Order from '../models/Order.js'
 import OrderItem from '../models/OrderItem.js'
+import Product from '../models/Product.js'
 import Status from '../models/Status.js'
 import { BadRequestError, NotFoundError } from '../errors/AppError.js'
 
 const DEFAULT_STATUS_NAME = 'NIEZATWIERDZONE'
+const STATUS_SEQUENCE = ['NIEZATWIERDZONE', 'ZATWIERDZONE', 'ZREALIZOWANE']
 
 class OrderService {
   async getAllOrders() {
@@ -26,11 +28,8 @@ class OrderService {
 
   async createOrder(payload) {
     const { items = [], ...rest } = payload || {}
-    const orderData = this._extractOrderFields(rest)
-
-    if (!orderData.user_name || !orderData.email || !orderData.phone) {
-      throw new BadRequestError('Missing required order data (user_name, email, phone)')
-    }
+    const orderData = this._validateOrderData(rest)
+    const normalizedItems = await this._validateAndNormalizeItems(items)
 
     const resolvedStatus = await this._resolveStatus(DEFAULT_STATUS_NAME, {
       allowDefault: true,
@@ -40,8 +39,6 @@ class OrderService {
       ...orderData,
       status_id: resolvedStatus.id,
     }).save()
-
-    const normalizedItems = this._normalizeItems(items)
 
     await Promise.all(
       normalizedItems.map((item) => OrderItem.forge({ ...item, order_id: savedOrder.id }).save())
@@ -73,32 +70,37 @@ class OrderService {
     const newStatus = await this._resolveStatus(statusInput)
 
     const currentStatus = order.related('status').get('name')
+    const normalizedCurrent = currentStatus?.toString().toUpperCase()
+    const normalizedNext = newStatus.get('name')?.toString().toUpperCase()
 
-    if (currentStatus === 'ANULOWANE') {
-      throw new BadRequestError('Cannot complete cancelled order')
+    if (normalizedCurrent === 'ANULOWANE') {
+      throw new BadRequestError('Cannot change status of a cancelled order')
     }
 
-    if (currentStatus === 'ZREALIZOWANE') {
-      throw new BadRequestError('Cannot change status of completed order')
+    if (normalizedCurrent === 'ZREALIZOWANE') {
+      throw new BadRequestError('Cannot change status of a completed order')
+    }
+
+    if (this._isBackwardTransition(normalizedCurrent, normalizedNext)) {
+      throw new BadRequestError(
+        `Cannot change order status backwards (${normalizedCurrent} -> ${normalizedNext})`
+      )
     }
 
     await order.save({ status_id: newStatus.id }, { patch: true })
     return this.getById(orderId)
   }
 
-  _extractOrderFields(data = {}) {
-    const result = {}
+  _validateOrderData(data = {}) {
+    const userNameValue = data.user_name ?? data.username
+    const user_name = this._ensureNonEmptyString(userNameValue, 'User name')
+    const email = this._validateEmail(data.email)
+    const phone = this._validatePhone(data.phone)
 
-    if (data.user_name || data.username) {
-      result.user_name = data.user_name ?? data.username
-    }
-
-    if (data.email) {
-      result.email = data.email
-    }
-
-    if (data.phone) {
-      result.phone = data.phone
+    const result = {
+      user_name,
+      email,
+      phone,
     }
 
     if (data.approved_at) {
@@ -108,28 +110,120 @@ class OrderService {
     return result
   }
 
-  _normalizeItems(items) {
-    if (!Array.isArray(items)) {
-      return []
+  async _validateAndNormalizeItems(items) {
+    if (!Array.isArray(items) || !items.length) {
+      throw new BadRequestError('Order must include at least one item')
     }
 
-    return items
-      .map((item) => {
-        const productId = item?.product_id ?? item?.productId
-        const quantity = item?.quantity
-        const unitPrice = item?.unit_price ?? item?.unitPrice
+    const normalized = items.map((item, index) => this._validateSingleItem(item, index))
+    await this._assertProductsExist(normalized)
+    return normalized
+  }
 
-        if (!productId || !quantity || !unitPrice) {
-          return null
-        }
+  _validateSingleItem(item, index) {
+    if (!item || typeof item !== 'object') {
+      throw new BadRequestError(`Order item #${index + 1} must be a valid object`)
+    }
 
-        return {
-          product_id: productId,
-          quantity,
-          unit_price: unitPrice,
-        }
-      })
-      .filter(Boolean)
+    const product = item.product_id ?? item.productId
+    const quantity = item.quantity
+    const unitPrice = item.unit_price ?? item.unitPrice
+
+    const product_id = this._ensurePositiveInteger(product, `Product ID for item #${index + 1}`)
+    const normalizedQuantity = this._ensurePositiveInteger(
+      quantity,
+      `Quantity for item #${index + 1}`
+    )
+    const normalizedPrice = this._ensurePositiveNumber(
+      unitPrice,
+      `Unit price for item #${index + 1}`
+    )
+
+    return {
+      product_id,
+      quantity: normalizedQuantity,
+      unit_price: normalizedPrice,
+    }
+  }
+
+  async _assertProductsExist(items) {
+    const ids = [...new Set(items.map((item) => item.product_id))]
+
+    const products = await Product.query((qb) => qb.whereIn('id', ids))
+      .fetchAll()
+      .catch(() => null)
+
+    const foundIds = products ? products.map((product) => product.get('id')) : []
+    const missing = ids.filter((id) => !foundIds.includes(id))
+
+    if (missing.length) {
+      throw new BadRequestError(`Products not found for IDs: ${missing.join(', ')}`)
+    }
+  }
+
+  _validateEmail(value) {
+    const email = this._ensureNonEmptyString(value, 'Email address')
+    const normalized = email.trim()
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (!emailRegex.test(normalized)) {
+      throw new BadRequestError('Email address has invalid format')
+    }
+
+    return normalized
+  }
+
+  _validatePhone(value) {
+    const phone = this._ensureNonEmptyString(value, 'Phone number')
+    const normalized = phone.replace(/[\s-]/g, '')
+
+    if (!/^\+?\d{6,15}$/.test(normalized)) {
+      throw new BadRequestError(
+        'Phone number must contain only digits, optional spaces or dashes, and may start with +'
+      )
+    }
+
+    return normalized
+  }
+
+  _ensureNonEmptyString(value, label) {
+    if (value === undefined || value === null) {
+      throw new BadRequestError(`${label} cannot be empty`)
+    }
+
+    const normalized = value.toString().trim()
+    if (!normalized) {
+      throw new BadRequestError(`${label} cannot be empty`)
+    }
+
+    return normalized
+  }
+
+  _ensurePositiveNumber(value, label) {
+    const asNumber = Number(value)
+    if (!Number.isFinite(asNumber) || asNumber <= 0) {
+      throw new BadRequestError(`${label} must be a positive number`)
+    }
+    return asNumber
+  }
+
+  _ensurePositiveInteger(value, label) {
+    const asNumber = Number(value)
+    if (!Number.isInteger(asNumber) || asNumber <= 0) {
+      throw new BadRequestError(`${label} must be a positive integer`)
+    }
+    return asNumber
+  }
+
+  _isBackwardTransition(currentStatus, nextStatus) {
+    const currentIndex = STATUS_SEQUENCE.indexOf(currentStatus)
+    const nextIndex = STATUS_SEQUENCE.indexOf(nextStatus)
+
+    if (currentIndex === -1 || nextIndex === -1) {
+      return false
+    }
+
+    return nextIndex < currentIndex
   }
 
   async _resolveStatus(statusInput, options = {}) {
