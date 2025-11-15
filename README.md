@@ -85,6 +85,15 @@ Backend korzysta ze zmiennych środowiskowych (każda ma domyślną wartość):
    ```
    API nasłuchuje pod `http://localhost:3000` (można zmienić przez `PORT`).
 
+6. **Dokumentacja API**
+   
+   Po uruchomieniu serwera, interaktywna dokumentacja Swagger/OpenAPI jest dostępna pod adresem:
+   ```
+   http://localhost:3000/docs
+   ```
+   
+   Dokumentacja zawiera pełny opis wszystkich endpointów, schematów danych, walidacji i możliwość testowania API bezpośrednio z przeglądarki.
+
 ## Autentykacja
 
 API wykorzystuje JWT (JSON Web Tokens) do autoryzacji. Większość endpointów wymaga tokenu Bearer w nagłówku `Authorization`.
