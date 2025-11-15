@@ -4,15 +4,24 @@
   "description": "Backend API for managing products, categories and orders in an e-commerce system.",
   "license": "MIT",
   "author": "Nikodem Nowak, Mateusz Kosowski",
-  "type": "commonjs",
+  "type": "module",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix",
+    "format": "prettier --write \"**/*.js\""
   },
   "dependencies": {
     "bookshelf": "^1.2.0",
     "express": "^5.1.0",
     "knex": "^0.21.21",
     "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2"
   }
 }
