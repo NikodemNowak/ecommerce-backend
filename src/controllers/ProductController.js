@@ -46,17 +46,4 @@ export default {
       res.status(500).json({ error: 'Server error' })
     }
   },
-
-  async delete(req, res) {
-    try {
-      await productService.delete(req.params.id)
-      res.json({ message: 'Deleted' })
-    } catch (err) {
-      if (err.message === 'Not found') {
-        return res.status(404).json({ error: 'Not found' })
-      }
-      console.error(err)
-      res.status(500).json({ error: 'Server error' })
-    }
-  },
 }

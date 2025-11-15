@@ -1,4 +1,4 @@
-exports.up = function (knex) {
+export function up(knex) {
   return knex.schema.createTable('orders', (table) => {
     table.increments('id').primary()
     table.timestamp('approved_at').nullable()
@@ -17,6 +17,6 @@ exports.up = function (knex) {
   })
 }
 
-exports.down = function (knex) {
+export function down(knex) {
   return knex.schema.dropTableIfExists('orders')
 }

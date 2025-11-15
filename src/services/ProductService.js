@@ -25,11 +25,6 @@ class ProductService {
     const product = await this.getById(id)
     return product.save(data, { patch: true })
   }
-
-  async delete(id) {
-    const product = await this.getById(id)
-    await product.destroy()
-  }
 }
 
 export default new ProductService()

@@ -1,4 +1,4 @@
-exports.seed = async function (knex) {
+export async function seed(knex) {
   await knex('statuses').del()
 
   return knex('statuses').insert([
