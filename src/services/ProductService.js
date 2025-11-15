@@ -19,18 +19,18 @@ class ProductService {
   }
 
   async create(data) {
-    const payload = this._validateProductPayload(data, { requireAllFields: true })
+    const payload = this._validateProductPayload(data)
     return Product.forge(payload).save()
   }
 
   async update(id, data) {
     const product = await this.getById(id)
     const payload = this._validateProductPayload(data)
-    return product.save(payload, { patch: true })
+    return product.save(payload)
   }
 
   _validateProductPayload(data, options = {}) {
-    const { requireAllFields = false } = options
+    const { requireAllFields = true } = options
 
     if (!data || typeof data !== 'object') {
       throw new BadRequestError('Product payload must be a valid object')

@@ -10,13 +10,13 @@ const STATUS_SEQUENCE = ['NIEZATWIERDZONE', 'ZATWIERDZONE', 'ZREALIZOWANE']
 class OrderService {
   async getAllOrders() {
     return Order.fetchAll({
-      withRelated: ['status', 'items', 'opinions'],
+      withRelated: ['status', 'items'],
     })
   }
 
   async getById(id) {
     const order = await Order.where({ id })
-      .fetch({ withRelated: ['status', 'items', 'opinions'] })
+      .fetch({ withRelated: ['status', 'items'] })
       .catch(() => null)
 
     if (!order) {
@@ -53,7 +53,7 @@ class OrderService {
     }
 
     return Order.where({ user_name: username }).fetchAll({
-      withRelated: ['status', 'items', 'opinions'],
+      withRelated: ['status', 'items'],
     })
   }
 
