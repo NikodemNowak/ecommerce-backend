@@ -1,6 +1,7 @@
 import express from 'express'
 import multer from 'multer'
 import ProductController from '../controllers/ProductController.js'
+import { authenticateToken, authorizeRole } from '../middlewares/auth.js'
 
 const router = express.Router()
 const upload = multer({
@@ -10,6 +11,12 @@ const upload = multer({
   },
 })
 
-router.post('/', upload.single('file'), ProductController.initialize)
+router.post(
+  '/',
+  authenticateToken,
+  authorizeRole('ADMIN'),
+  upload.single('file'),
+  ProductController.initialize
+)
 
 export default router
