@@ -12,20 +12,25 @@ class AppError extends Error {
     this.statusCode = statusCode
     this.status = statusCode
     this.type = options.type || DEFAULT_TYPE
-    this.title = options.title || this.getDefaultTitle()
+    this.title = options.title || this.getDefaultTitle(statusCode)
     this.instance = options.instance || null
     Error.captureStackTrace?.(this, this.constructor)
   }
 
-  getDefaultTitle() {
+  getDefaultTitle(statusCode) {
     const titleMap = {
-      AppError: 'Internal Server Error',
-      BadRequestError: 'Bad Request',
-      NotFoundError: 'Not Found',
-      ConflictError: 'Conflict',
-      ForbiddenError: 'Forbidden',
+      [StatusCodes.BAD_REQUEST]: 'Bad Request',
+      [StatusCodes.UNAUTHORIZED]: 'Unauthorized',
+      [StatusCodes.FORBIDDEN]: 'Forbidden',
+      [StatusCodes.NOT_FOUND]: 'Not Found',
+      [StatusCodes.CONFLICT]: 'Conflict',
+      [StatusCodes.UNPROCESSABLE_ENTITY]: 'Unprocessable Entity',
+      [StatusCodes.TOO_MANY_REQUESTS]: 'Too Many Requests',
+      [StatusCodes.INTERNAL_SERVER_ERROR]: 'Internal Server Error',
+      [StatusCodes.BAD_GATEWAY]: 'Bad Gateway',
+      [StatusCodes.SERVICE_UNAVAILABLE]: 'Service Unavailable',
     }
-    return titleMap[this.name] || 'Error'
+    return titleMap[statusCode] || 'Error'
   }
 }
 
@@ -69,4 +74,14 @@ class ForbiddenError extends AppError {
   }
 }
 
-export { AppError, BadRequestError, NotFoundError, ConflictError, ForbiddenError }
+class UnauthorizedError extends AppError {
+  constructor(message = 'Unauthorized', options = {}) {
+    super(message, StatusCodes.UNAUTHORIZED, {
+      ...options,
+      type: options.type || ProblemTypes.UNAUTHORIZED,
+      title: options.title || 'Unauthorized',
+    })
+  }
+}
+
+export { AppError, BadRequestError, NotFoundError, ConflictError, ForbiddenError, UnauthorizedError }

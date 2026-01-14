@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken'
 import argon2 from 'argon2'
 import User from '../models/User.js'
-import { AppError } from '../errors/AppError.js'
-import { StatusCodes } from 'http-status-codes'
+import { BadRequestError, UnauthorizedError, ConflictError } from '../errors/AppError.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'byle_co_ale_trudne_do_zgadniecia'
 const JWT_REFRESH_SECRET =
@@ -13,19 +12,19 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '1d'
 class AuthService {
   async login(username, password) {
     if (!username || !password) {
-      throw new AppError('Username and password are required', StatusCodes.BAD_REQUEST)
+      throw new BadRequestError('Username and password are required')
     }
 
     const user = await User.where({ username }).fetch()
 
     if (!user) {
-      throw new AppError('Invalid credentials', StatusCodes.UNAUTHORIZED)
+      throw new UnauthorizedError('Invalid credentials')
     }
 
     const isPasswordValid = await argon2.verify(user.get('password'), password)
 
     if (!isPasswordValid) {
-      throw new AppError('Invalid credentials', StatusCodes.UNAUTHORIZED)
+      throw new UnauthorizedError('Invalid credentials')
     }
 
     const accessToken = this.generateAccessToken(user)
@@ -45,20 +44,20 @@ class AuthService {
 
   async refresh(refreshToken) {
     if (!refreshToken) {
-      throw new AppError('Refresh token is required', StatusCodes.BAD_REQUEST)
+      throw new BadRequestError('Refresh token is required')
     }
 
     let decoded
     try {
       decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET)
     } catch (error) {
-      throw new AppError('Invalid or expired refresh token', StatusCodes.UNAUTHORIZED)
+      throw new UnauthorizedError('Invalid or expired refresh token')
     }
 
     const user = await User.where({ id: decoded.id }).fetch()
 
     if (!user) {
-      throw new AppError('User not found', StatusCodes.UNAUTHORIZED)
+      throw new UnauthorizedError('User not found')
     }
 
     const accessToken = this.generateAccessToken(user)
@@ -72,20 +71,20 @@ class AuthService {
 
   async register(username, password, email) {
     if (!username || !password) {
-      throw new AppError('Username and password are required', StatusCodes.BAD_REQUEST)
+      throw new BadRequestError('Username and password are required')
     }
 
     if (username.length < 3) {
-      throw new AppError('Username must be at least 3 characters', StatusCodes.BAD_REQUEST)
+      throw new BadRequestError('Username must be at least 3 characters')
     }
 
     if (password.length < 6) {
-      throw new AppError('Password must be at least 6 characters', StatusCodes.BAD_REQUEST)
+      throw new BadRequestError('Password must be at least 6 characters')
     }
 
     const existingUser = await User.where({ username }).fetch()
     if (existingUser) {
-      throw new AppError('Username already exists', StatusCodes.CONFLICT)
+      throw new ConflictError('Username already exists')
     }
 
     const hashedPassword = await argon2.hash(password)

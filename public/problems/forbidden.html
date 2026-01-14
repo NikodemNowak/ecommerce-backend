@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>403 Forbidden - E-commerce API</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; padding: 40px 20px; }
+    .container { max-width: 700px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+    .header { background: #9b59b6; color: white; padding: 30px; }
+    .header h1 { font-size: 2rem; margin-bottom: 5px; }
+    .header .code { font-size: 3rem; font-weight: 700; opacity: 0.3; float: right; margin-top: -40px; }
+    .content { padding: 30px; }
+    .content h2 { color: #9b59b6; margin-bottom: 15px; font-size: 1.2rem; }
+    .content p { margin-bottom: 15px; }
+    .content ul { margin: 15px 0 15px 25px; }
+    .content li { margin-bottom: 8px; }
+    .example { background: #f8f9fa; border-left: 4px solid #9b59b6; padding: 15px; margin: 20px 0; font-family: monospace; font-size: 0.9rem; overflow-x: auto; }
+    .footer { background: #f8f9fa; padding: 20px 30px; font-size: 0.85rem; color: #666; border-top: 1px solid #eee; }
+    a { color: #3498db; }
+    .role-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    .role-table th, .role-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+    .role-table th { background: #f8f9fa; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="code">403</span>
+      <h1>Forbidden</h1>
+      <p>Dostęp zabroniony</p>
+    </div>
+    <div class="content">
+      <h2>Opis błędu</h2>
+      <p>Serwer rozumie żądanie, ale odmawia jego wykonania. Użytkownik jest uwierzytelniony, ale nie ma uprawnień do wykonania tej operacji.</p>
+      
+      <h2>Różnica między 401 a 403</h2>
+      <ul>
+        <li><strong>401 Unauthorized</strong> – nie wiesz kim jesteś (brak/nieprawidłowe logowanie)</li>
+        <li><strong>403 Forbidden</strong> – wiem kim jesteś, ale nie masz dostępu</li>
+      </ul>
+      
+      <h2>Role w systemie</h2>
+      <table class="role-table">
+        <tr><th>Rola</th><th>Uprawnienia</th></tr>
+        <tr><td><code>CUSTOMER</code></td><td>Przeglądanie produktów, składanie zamówień, zarządzanie własnymi zamówieniami</td></tr>
+        <tr><td><code>EMPLOYEE</code></td><td>Wszystko co CUSTOMER + zarządzanie wszystkimi zamówieniami, zmiana statusów</td></tr>
+      </table>
+      
+      <h2>Najczęstsze przyczyny</h2>
+      <ul>
+        <li>Próba dostępu do zasobu innego użytkownika (np. cudzego zamówienia)</li>
+        <li>Próba wykonania operacji administracyjnej bez roli EMPLOYEE</li>
+        <li>Próba modyfikacji zasobu, do którego masz tylko dostęp do odczytu</li>
+      </ul>
+      
+      <h2>Jak naprawić?</h2>
+      <p>Upewnij się, że Twoje konto ma odpowiednie uprawnienia do wykonania tej operacji. Skontaktuj się z administratorem, jeśli potrzebujesz wyższych uprawnień.</p>
+    </div>
+    <div class="footer">
+      E-commerce Backend API • <a href="/docs">Dokumentacja API</a>
+    </div>
+  </div>
+</body>
+</html>

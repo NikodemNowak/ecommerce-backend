@@ -1,6 +1,8 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import productRoutes from './src/routes/products.js'
 import categoryRoutes from './src/routes/category.js'
 import orderRoutes from './src/routes/order.js'
@@ -9,11 +11,17 @@ import authRoutes from './src/routes/auth.js'
 import initRoutes from './src/routes/init.js'
 import { swaggerSpec, swaggerUi } from './src/config/swagger.js'
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 const app = express()
 const PORT = process.env.PORT || 3000
 
 app.use(cors())
 app.use(express.json())
+
+// Static pages for error documentation
+app.use('/problems', express.static(path.join(__dirname, 'public', 'problems')))
 
 // Swagger documentation
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

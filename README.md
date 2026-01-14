@@ -20,14 +20,45 @@ Prosty backend API do zarządzania produktami, kategoriami, zamówieniami i opin
 
 ## Konfiguracja środowiska
 
-Backend korzysta ze zmiennych środowiskowych (każda ma domyślną wartość):
+Backend korzysta ze zmiennych środowiskowych (każda ma domyślną wartość). Utwórz plik `.env` w katalogu głównym projektu na podstawie poniższego przykładu:
 
-| Zmienna       | Domyślnie | Znaczenie             |
-| ------------- | --------- | --------------------- |
-| `DB_USER`     | postgres  | użytkownik PostgreSQL |
-| `DB_PASSWORD` | password  | hasło użytkownika     |
-| `DB_NAME`     | ecommerce | nazwa bazy danych     |
-| `PORT`        | 3000      | port serwera HTTP     |
+```env
+# Database Configuration
+DB_USER=postgres
+DB_PASSWORD=password
+DB_NAME=ecommerce
+
+# Server Configuration
+PORT=3000
+
+# JWT Configuration
+JWT_SECRET=your-secret-key-change-in-production
+JWT_REFRESH_SECRET=your-refresh-secret-key-change-in-production
+JWT_EXPIRES_IN=1h
+JWT_REFRESH_EXPIRES_IN=1d
+
+# GROQ API Configuration (optional - required for SEO description generation)
+# Format: gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+GROQ_API_KEY=gsk_your_groq_api_key_here
+```
+
+### Opis zmiennych środowiskowych
+
+| Zmienna                | Domyślnie                                    | Znaczenie                                                          |
+| ---------------------- | -------------------------------------------- | ------------------------------------------------------------------ |
+| `DB_USER`              | postgres                                     | użytkownik PostgreSQL                                             |
+| `DB_PASSWORD`          | password                                     | hasło użytkownika PostgreSQL                                      |
+| `DB_NAME`              | ecommerce                                    | nazwa bazy danych                                                 |
+| `PORT`                 | 3000                                         | port serwera HTTP                                                 |
+| `JWT_SECRET`           | byle_co_ale_trudne_do_zgadniecia            | sekret do podpisywania tokenów JWT (dostęp)                       |
+| `JWT_REFRESH_SECRET`   | byle_co_ale_trudne_do_zgadniecia_refresh    | sekret do podpisywania tokenów odświeżania                        |
+| `JWT_EXPIRES_IN`       | 1h                                           | czas wygaśnięcia tokenu dostępu (format: 1h, 30m, 7d)            |
+| `JWT_REFRESH_EXPIRES_IN` | 1d                                         | czas wygaśnięcia tokenu odświeżania (format: 1h, 30m, 7d)         |
+| `GROQ_API_KEY`         | (brak)                                       | klucz API GROQ do generowania SEO opisów produktów (opcjonalny)  |
+
+**⚠️ UWAGA:** W środowisku produkcyjnym **zawsze** zmień wartości `JWT_SECRET` i `JWT_REFRESH_SECRET` na silne, losowe sekrety. Domyślne wartości są przeznaczone wyłącznie do rozwoju.
+
+**GROQ API:** Klucz `GROQ_API_KEY` jest wymagany tylko wtedy, gdy chcesz korzystać z funkcji generowania SEO opisów produktów (`GET /products/:id/seo-description`). Bez tego klucza endpoint zwróci błąd 400.
 
 ## Struktura projektu
 
