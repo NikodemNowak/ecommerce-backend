@@ -9,7 +9,7 @@ class AuthController {
       const result = await AuthService.login(username, password)
       res.status(StatusCodes.OK).json(result)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   }
 
@@ -19,7 +19,17 @@ class AuthController {
       const result = await AuthService.refresh(refreshToken)
       res.status(StatusCodes.OK).json(result)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
+    }
+  }
+
+  async register(req, res) {
+    try {
+      const { username, password, email } = req.body
+      const user = await AuthService.register(username, password, email)
+      res.status(StatusCodes.CREATED).json(user)
+    } catch (err) {
+      handleControllerError(res, err, req)
     }
   }
 }

@@ -21,7 +21,7 @@ export default {
       const orders = await OrderService.getAllOrders()
       res.json(orders)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 
@@ -30,7 +30,7 @@ export default {
       const order = await OrderService.createOrder(req.body, req.user)
       res.status(StatusCodes.CREATED).json(order)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 
@@ -39,7 +39,7 @@ export default {
       const order = await OrderService.getById(req.params.id)
       res.json(order)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 
@@ -63,7 +63,7 @@ export default {
       const orders = await OrderService.getOrdersByUserId(userId)
       res.json(orders)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 
@@ -72,7 +72,7 @@ export default {
       const orders = await OrderService.getOrdersByStatusId(req.params.statusId)
       res.json(orders)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 
@@ -89,7 +89,7 @@ export default {
       const updated = await OrderService.changeStatus(req.params.id, statusValue)
       res.json(updated)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 
@@ -98,7 +98,7 @@ export default {
       const opinion = await OrderService.addOpinion(req.params.id, req.user, req.body)
       res.status(StatusCodes.CREATED).json(opinion)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 }

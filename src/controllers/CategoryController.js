@@ -7,7 +7,7 @@ export default {
       const categories = await categoryService.getAll()
       res.json(categories)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 }

@@ -10,7 +10,7 @@ export default {
       const products = await productService.getAll()
       res.json(products)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 
@@ -19,7 +19,7 @@ export default {
       const product = await productService.getById(req.params.id)
       res.json(product)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 
@@ -28,7 +28,7 @@ export default {
       const product = await productService.create(req.body)
       res.status(StatusCodes.CREATED).json(product)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 
@@ -37,7 +37,7 @@ export default {
       const updated = await productService.update(req.params.id, req.body)
       res.json(updated)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 
@@ -47,7 +47,7 @@ export default {
       const seoDesc = await productService.generateSeoDescription(id)
       res.json({ seoDescription: seoDesc })
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 
@@ -74,7 +74,7 @@ export default {
         count,
       })
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 }

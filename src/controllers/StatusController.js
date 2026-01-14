@@ -2,12 +2,12 @@ import statusService from '../services/StatusService.js'
 import { handleControllerError } from '../utils/controllerErrorHandler.js'
 
 export default {
-  async getAll(_, res) {
+  async getAll(req, res) {
     try {
       const statuses = await statusService.getAll()
       res.json(statuses)
     } catch (err) {
-      handleControllerError(res, err)
+      handleControllerError(res, err, req)
     }
   },
 }

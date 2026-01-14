@@ -70,6 +70,41 @@ class AuthService {
     }
   }
 
+  async register(username, password, email) {
+    if (!username || !password) {
+      throw new AppError('Username and password are required', StatusCodes.BAD_REQUEST)
+    }
+
+    if (username.length < 3) {
+      throw new AppError('Username must be at least 3 characters', StatusCodes.BAD_REQUEST)
+    }
+
+    if (password.length < 6) {
+      throw new AppError('Password must be at least 6 characters', StatusCodes.BAD_REQUEST)
+    }
+
+    const existingUser = await User.where({ username }).fetch()
+    if (existingUser) {
+      throw new AppError('Username already exists', StatusCodes.CONFLICT)
+    }
+
+    const hashedPassword = await argon2.hash(password)
+
+    const user = await new User({
+      username,
+      password: hashedPassword,
+      email: email || null,
+      role: 'CUSTOMER',
+    }).save()
+
+    return {
+      id: user.get('id'),
+      username: user.get('username'),
+      email: user.get('email'),
+      role: user.get('role'),
+    }
+  }
+
   generateAccessToken(user) {
     return jwt.sign(
       {

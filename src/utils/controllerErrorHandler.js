@@ -1,12 +1,13 @@
 import { StatusCodes } from 'http-status-codes'
+import { formatErrorResponse } from './problemDetails.js'
 
-export function handleControllerError(res, err) {
+export function handleControllerError(res, err, req) {
   const status = resolveStatus(err)
-  const message = err?.message || 'Server error'
-
   console.error(err)
 
-  return res.status(status).json({ error: message })
+  const problem = formatErrorResponse(err, req?.path)
+
+  return res.status(status).set('Content-Type', 'application/problem+json').json(problem)
 }
 
 function resolveStatus(err) {
