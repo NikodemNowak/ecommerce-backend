@@ -178,20 +178,32 @@ class ProductService {
       model: 'openai/gpt-oss-20b',
       messages: [
         {
+          role: 'system',
+          content:
+            'Jesteś specjalistą od SEO i marketingu. Twórz zwięzły, profesjonalny opis produktu w języku polskim. Używaj wyłącznie prostego HTML bez znaczników <html>, <head>, <body>. Dozwolone tagi: <p>, <strong>, <em>, <br>. Nie używaj <ul>, <li>, <h1>, <h2>, <h3>, <section>, <main>.',
+        },
+        {
           role: 'user',
           content: `
-Generate a complete HTML5 product page for the following product:
-Product Name: ${name}
-Description: ${description}
-Price: $${price}
-Weight: ${weight}kg
+Napisz krótki, profesjonalny opis SEO produktu (maksymalnie 2-3 akapity).
 
-Output format - Return a COMPLETE, VALID HTML5 document optimized for SEO, including meta tags and structured data.
+Produkt: ${name}
+Obecny opis: ${description}
+Cena: ${price} zł
+Waga: ${weight} kg
+
+Wymagania:
+- Język: polski
+- Format: prosty HTML (tylko <p>, <strong>, <em>, <br>)
+- Styl: profesjonalny, marketingowy, zachęcający do zakupu
+- Długość: maksymalnie 3 krótkie akapity
+- Nie wymyślaj informacji których nie ma w danych produktu
+- Nie używaj list (<ul>, <li>), nagłówków ani section/main
           `.trim(),
         },
       ],
-      temperature: 0.7,
-      max_tokens: 2000,
+      temperature: 0.6,
+      max_tokens: 800,
     }
 
     try {
@@ -215,11 +227,7 @@ Output format - Return a COMPLETE, VALID HTML5 document optimized for SEO, inclu
         throw new Error('No SEO description generated')
       }
 
-      return {
-        product_id: id,
-        product_name: name,
-        seo_description: seoDescription,
-      }
+      return seoDescription
     } catch (error) {
       throw new BadRequestError(`Failed to generate SEO description: ${error.message}`)
     }

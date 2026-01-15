@@ -15,9 +15,18 @@ class AuthService {
       throw new BadRequestError('Username and password are required')
     }
 
-    const user = await User.where({ username }).fetch()
+    let user
+    try {
+      user = await User.where({ username }).fetch()
+    } catch (error) {
+      if (error.message.includes('EmptyResponse')) {
+        user = null
+      } else {
+        throw error
+      }
+    }
 
-    if (!user) {
+    if (!user || !user.get('id')) {
       throw new UnauthorizedError('Invalid credentials')
     }
 
@@ -54,9 +63,18 @@ class AuthService {
       throw new UnauthorizedError('Invalid or expired refresh token')
     }
 
-    const user = await User.where({ id: decoded.id }).fetch()
+    let user
+    try {
+      user = await User.where({ id: decoded.id }).fetch()
+    } catch (error) {
+      if (error.message.includes('EmptyResponse')) {
+        user = null
+      } else {
+        throw error
+      }
+    }
 
-    if (!user) {
+    if (!user || !user.get('id')) {
       throw new UnauthorizedError('User not found')
     }
 
@@ -82,8 +100,18 @@ class AuthService {
       throw new BadRequestError('Password must be at least 6 characters')
     }
 
-    const existingUser = await User.where({ username }).fetch()
-    if (existingUser) {
+    let existingUser
+    try {
+      existingUser = await User.where({ username }).fetch()
+    } catch (error) {
+      if (error.message.includes('EmptyResponse')) {
+        existingUser = null
+      } else {
+        throw error
+      }
+    }
+    
+    if (existingUser && existingUser.get('id')) {
       throw new ConflictError('Username already exists')
     }
 

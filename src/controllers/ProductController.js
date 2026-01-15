@@ -45,7 +45,7 @@ export default {
     try {
       const { id } = req.params
       const seoDesc = await productService.generateSeoDescription(id)
-      res.json({ seoDescription: seoDesc })
+      res.json({ description: seoDesc })
     } catch (err) {
       handleControllerError(res, err, req)
     }

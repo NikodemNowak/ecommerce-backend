@@ -1,0 +1,88 @@
+Celem zadania jest nabycie umiejętności tworzenia aplikacji serwerowych z zewnętrznym klientem (będzie do napisania później). Końcowy system powinien się zatem składać z dwóch aplikacji. Pierwsza aplikacja (backend - do zrobienia w tym zadaniu) powinna zapewniać dostępne dla aplikacji klienckiej (frontend - do zrobienia w kolejnym zadaniu) metody (API) i zapisywać dane w bazie danych. Druga z aplikacji powinna mieć możliwość korzystania z tych metod. Zadanie można zrealizować korzystając z bazy nierelacyjnej lub relacyjnej.
+
+Przykładowe technologie (stos z bazą relacyjną): - bada relacyjna - MySQL - narzędzie do ORM - knex i bookshelf - framework backendowy - Express.js
+
+Przykładowe technologie (stos z bazą nierelacyjną): - baza nierelacyjna - MongoDB - narzędzie do ORM - mongoose - framwork backendowy - Express.js
+
+Dopuszczalne jest korzystanie z innych frameworków backendowych, np. Hapi.js. Można też obsługiwać API dla aplikacji klienckiej bez żadnego frameworka, wykorzystując tylko metody node.js. Podobnie można korzystać z innej biblioteki do ORM (np. TypeORM) lub nie korzystać z żadnej.
+
+Wymagania na ocenę 3
+Utwórz bazę danych umożliwiającą przechowywanie danych o towarach i zamówieniach w sklepie. Baza danych ma przechowywać następujące dane o poszczególnych encjach w systemie (wszystkie powinny być identyfikowalne - identyfikator dowolnego typu):
+
+Produkt: nazwa, opis (oba pola to tekst, opis może być w formie HTML), cena jednostkowa, waga jednostkowa (liczby z przecinkiem), kategoria towaru (jedno obowiązkowe odniesienie do encji Kategoria)
+Kategoria: nazwa (typu tekst) - Kategorie można uznać za predefiniowane, tzn. nie potrzeba API dla ich dodawania/usuwania ale zestaw dopuszczanych kategorii powinien znajdować się w bazie danych. Kategorie mają strukturę płaską, czyli nie ma "podkategorii"
+Zamówienie: data zatwierdzenia (data, dopuszczalny null), stan zamówienia (jedno obowiązkowe odniesienie do encji Stan Zamówienia) nazwa użytkownika, email (oba typu tekst), numer telefonu (typu tekst), lista zamówionych towarów wraz z liczbą sztuk każdego towaru (liczby całkowite dodatnie), ceną jednostkową towaru w danym zamówieniu, opcjonalnie: stawka vat, rabat, itp. Należy dodać odpowiednie tabele w bazie danych.
+Stan Zamówienia: nazwa (typu tekst) - predefiniowane w bazie stany: NIEZATWIERDZONE, ZATWIERDZONE, ANULOWANE, ZREALIZOWANE (nazwy można przetłumaczyć na angielski)
+W aplikacji serwerowej zapewnij metody umożliwiające następujące operacje na bazie danych:
+
+Produkt: wyświetlenie kompletnej listy, wyświetlenie jednego elementu (po identyfikatorze), dodanie elementu, zmiana elementu (dowolna właściwość poza identyfikatorem)
+Kategoria: pobranie kompletnej listy
+Zamówienie: wyświetlenie listy zamówień, wyświetlenie zamówień dla konkretnej nazwy użytkownika, wyświetlenie jednego elementu (po identyfikatorze), zmiana stanu zamówienia (z walidacją poprawności zmiany, np. nie można zrealizować anulowanego zamówienia), wyświetlenie zamówień wg stanu
+Stan Zamówienia: pobranie kompletnej listy
+W aplikacji serwerowej zapewnij metody umożliwiające wykonanie wszystkich metod logiki biznesowej przez HTTP.
+
+Zalecana struktura API:
+
+Produkt:
+GET app_url/products - zwraca wszystkie produkty
+GET app_url/products/id - zwraca dane produktu o konkretnym identyfikatorze
+POST app_url/products - dodaje produkt do bazy (parametry w ciele żądania)
+PUT app_url/products/id - aktualizuje produkt o konkretnym identyfikatorze, pozostałe parametry produktu w ciele żądania. Można też zrobić PUT app_url/products ze wszystkimi parametrami w ciele żądania.
+Kategoria:
+GET app_url/categories - zwraca wszystkie kategorie
+Zamówienia:
+GET app_url/orders - zwraca wszystkie zamówienia
+POST app_url/orders - dodaje zamówienie (parametry w ciele żądania)
+PATCH app_url/orders/id - zmiana stanu zamówienia o podanym identyfikatorze, dane w formacie JSON PATCH. Dopuszczalne są inne warianty, np. PUT app_url/orders/id z nowym stanem i pozostałymi parametrami zamówienia w ciele żądania.
+GET app_url/orders/status/id - pobranie zamówień z określonym stanem
+Stan Zamówienia:
+GET app_url/status - zwraca wszystkie możliwe stany zamówienia
+Kody błędów
+Zrealizować obsługę błędów po stronie serwera, używając nie tyle magic numbers a raczej korzystając ze stałych dla kodów statusów HTTP.
+Proponowane jest użycie (przez require lub import) modułu NPM http-status-codes
+patrz: https://www.npmjs.com/package/http-status-codes | RunKit
+Walidacja
+W szczególności obsłużyć poniższe błędne sytuacje (zalecane przesłanie odpowiedzi w formie JSON + odpowiedni kod HTTP):
+
+Produkt:
+Próba dodania z ujemną ceną lub wagą, zerową wagą i ceną, pustym opisem lub nazwą.
+Próba zmiany wartości pól na niewłaściwe
+Próba zmiany wartości pól dla nieistniejącego identyfikatora
+Zamówienie:
+
+Próba dodania zamówienia z pustymi polami dotyczącymi użytkownika
+Próba dodania zamówienia z niewłaściwie wypełnionymi polami dotyczącymi użytkownika (np. numer telefonu zawiera litery)
+Zmiana statusu po anulowaniu zamówienia
+Próba dodania zamówienia z towarami, których identyfikatorów nie ma w bazie danych
+Próba dodania zamówienia z ujemnymi, zerowymi lub zawierającymi liczby ilościami towarów
+Zmiana statusu "wstecz", np. ze "ZREALIZOWANE" na "NIEZATWIERDZONE"
+Próba aktualizacji stanu zamówienia o nieistniejącym identyfikatorze
+Komunikaty powinny być informatywne, czyli zawierać szczegółową informację dla użytkownika o powodzie wystąpienia problemu z wykonaniem operacji.
+
+UWAGA: Poniższy punkt należy zrealizować tylko w przypadku, jeżeli nie będą realizowane wymagania na wyższe oceny
+
+W narzędziu typu PostMan zrealizować zapytania pokazujące działanie aplikacji (dostęp do każdej metody z API)
+Wymagania dodatkowe na wyższe oceny (każde wymaganie dodatkowe zwiększa ocenę o 0.5)
+D1. Optymalizacja opisu produktu pod kątem SEO
+Dodaj w API dla produktów endpoint GET app_url/products/{id}/seo-description, który zwraca opis produktu w formie HTML zgodnej z wymaganiami SEO. Opis powinien być tworzony automatycznie, przez model językowy (np. przez API Groq), na podstawie danych produktu dostępnych w bazie danych. Do komunikacji z modelem językowym można wykorzystać dowolne narzędzie, np. axios. Zwróć uwagę, że komunikacja z modelem odbywa się tym razem po stronie serwera i nie powoduje automatycznego .
+
+D2. Uwierzytelnianie do aplikacji
+Zabezpiecz dostęp do wrażliwych metod API za pomocą tokenów JWT. Zaimplementuj mechanizm uwierzytelniania użytkowników, który pozwoli na dostęp do API tylko z wykorzystaniem poprawnego tokenu JWT. Token powinien być przesyłany w nagłówku Authorization w formie Bearer {token}. Zaimplementuj metodę POST app_url/login, która pozwoli na uzyskanie tokenu JWT na podstawie przesłanych danych uwierzytelniających (login, hasło). Token powinien być ważny przez określony czas (np. 1 godzinę). Zaimplementuj mechanizm odświeżania tokenu JWT.
+
+UWAGA Będziesz potrzebować dodatkowej tabeli w bazie danych do przechowywania danych użytkowników i ich ról (mogą być dwie: KLIENT, PRACOWNIK). Na potrzeby realizacji wymagania możesz korzystać z dowolnych bibliotek obsługujących JWT i proces uwierzytelniania (np. jsonwebtoken, passport, bcrypt).
+
+D3. Inicjalizacja towarów w bazie danych na podstawie pliku.
+Zaimplementuj metodę POST app_url/init umożliwiającą inicjalizację bazy danych na podstawie danych w formacie JSON lub CSV. Inicjalizuje się jedynie dane towarów. Kategorie powinny być dodane do bazy w inny sposób. W przypadku, gdy w bazie danych są już jakieś towary, metoda powinna zwrócić odpowiedni kod błędu. W przypadku sukcesu metoda powinna zwrócić kod 200 i informację o sukcesie. Metoda powinna być zabezpieczona przed nieautoryzowanym dostępem, o ile realizujesz wymaganie D2. Dozwolona jest realizacja tego wymagania jako aktualizacja danych istniejących towarów w bazie sklepu, np. na podstawie wyeksportowanych danych z systemu magazynowego.
+
+D4. Dodawanie opinii po zakupie
+Dodaj do API metodę umożliwiające dodawanie opinii dotyczących procesu obsługi zamówienia. Opinie powinny być przypisane do zamówienia, a nie do produktu. Metoda POST app_url/orders/{id}/opinions powinna umożliwiać dodanie opinii do zamówienia o podanym identyfikatorze. Opinia powinna zawierać ocenę (liczba całkowita z zakresu 1-5) i treść (tekst). Metoda powinna zwracać kod 201 w przypadku sukcesu i 400 w przypadku błędu. W przypadku błędu metoda powinna zwracać informację o błędzie w formie JSON. Jeśli realizujesz wymaganie D2, zabezpiecz metodę przed nieautoryzowanym dostępem (opinię powinien móc dodać tylko użytkownik, który złożył zamówienie). Przyjmij, że opinię można dodać tylko do zamówienia, które jest ZREALIZOWANE lub ANULOWANE
+
+Zobacz także
+Standards.REST - w tym:
+
+Problem Details for HTTP APIs (RFC 7807) / 3. The Problem Details JSON Object
+Example - Java, SpringBoot: Error Responses using Problem Details for HTTP APIs
+JavaScript Object Notation (JSON) Patch (RFC 6902)
+JSON Patch | https://jsonpatch.com/
+JSON-Patch module | https://github.com/Starcounter-Jack/JSON-Patch
+JSON Web Tokens - https://jwt.io

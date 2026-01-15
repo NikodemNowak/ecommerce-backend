@@ -10,8 +10,6 @@ const router = express.Router()
  *   get:
  *     summary: Pobierz wszystkie produkty
  *     tags: [Produkty]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista produktów
@@ -21,14 +19,8 @@ const router = express.Router()
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Product'
- *       401:
- *         description: Brak autoryzacji
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  */
-router.get('/', authenticateToken, ProductController.getAll)
+router.get('/', ProductController.getAll)
 
 /**
  * @swagger
@@ -36,8 +28,6 @@ router.get('/', authenticateToken, ProductController.getAll)
  *   get:
  *     summary: Pobierz produkt po ID
  *     tags: [Produkty]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -54,12 +44,8 @@ router.get('/', authenticateToken, ProductController.getAll)
  *               $ref: '#/components/schemas/Product'
  *       404:
  *         description: Produkt nie znaleziony
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  */
-router.get('/:id', authenticateToken, ProductController.getById)
+router.get('/:id', ProductController.getById)
 
 /**
  * @swagger

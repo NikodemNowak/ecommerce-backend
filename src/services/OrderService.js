@@ -12,13 +12,13 @@ const OPINION_ALLOWED_STATUSES = ['ZREALIZOWANE', 'ANULOWANE']
 class OrderService {
   async getAllOrders() {
     return Order.fetchAll({
-      withRelated: ['status', 'items', 'opinions', 'user'],
+      withRelated: ['status', 'items.product', 'opinions', 'user'],
     })
   }
 
   async getById(id) {
     const order = await Order.where({ id })
-      .fetch({ withRelated: ['status', 'items', 'opinions', 'user'] })
+      .fetch({ withRelated: ['status', 'items.product', 'opinions', 'user'] })
       .catch(() => null)
 
     if (!order) {
@@ -62,7 +62,7 @@ class OrderService {
     const normalizedUserId = this._ensurePositiveInteger(userId, 'User ID')
 
     return Order.where({ user_id: normalizedUserId }).fetchAll({
-      withRelated: ['status', 'items', 'opinions', 'user'],
+      withRelated: ['status', 'items.product', 'opinions', 'user'],
     })
   }
 
@@ -70,7 +70,7 @@ class OrderService {
     const status = await this._getStatusById(statusId)
 
     return Order.where({ status_id: status.id }).fetchAll({
-      withRelated: ['status', 'items', 'opinions', 'user'],
+      withRelated: ['status', 'items.product', 'opinions', 'user'],
     })
   }
 
@@ -158,9 +158,40 @@ class OrderService {
       throw new BadRequestError('Order must include at least one item')
     }
 
-    const normalized = items.map((item, index) => this._validateSingleItem(item, index))
-    await this._assertProductsExist(normalized)
+    const normalized = await this._validateAndNormalizeItemsWithPrices(items)
     return normalized
+  }
+
+  async _validateAndNormalizeItemsWithPrices(items) {
+    const normalized = items.map((item, index) => this._validateSingleItem(item, index))
+    const productsWithPrices = await this._fetchProductPrices(normalized)
+    
+    return normalized.map((item, index) => {
+      const productInfo = productsWithPrices.find(p => p.id === item.product_id)
+      if (!productInfo) {
+        throw new BadRequestError(`Product #${item.product_id} not found`)
+      }
+      return {
+        ...item,
+        unit_price: productInfo.price
+      }
+    })
+  }
+
+  async _fetchProductPrices(items) {
+    const ids = [...new Set(items.map((item) => item.product_id))]
+    const products = await Product.query((qb) => qb.whereIn('id', ids))
+      .fetchAll()
+      .catch(() => null)
+    
+    if (!products || products.length === 0) {
+      return []
+    }
+    
+    return products.map(product => ({
+      id: product.get('id'),
+      price: product.get('price')
+    }))
   }
 
   _validateSingleItem(item, index) {
@@ -170,22 +201,16 @@ class OrderService {
 
     const product = item.product_id ?? item.productId
     const quantity = item.quantity
-    const unitPrice = item.unit_price ?? item.unitPrice
 
     const product_id = this._ensurePositiveInteger(product, `Product ID for item #${index + 1}`)
     const normalizedQuantity = this._ensurePositiveInteger(
       quantity,
       `Quantity for item #${index + 1}`
     )
-    const normalizedPrice = this._ensurePositiveNumber(
-      unitPrice,
-      `Unit price for item #${index + 1}`
-    )
 
     return {
       product_id,
       quantity: normalizedQuantity,
-      unit_price: normalizedPrice,
     }
   }
 
